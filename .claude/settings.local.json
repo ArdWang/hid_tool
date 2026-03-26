@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "Bash(curl -s https://api.github.com/repos/libusb/hidapi/releases)",
+      "Bash(find /e/Project/Github/flutter/hid_tool -type f \\\\\\(-name *.dart -o -name *.cpp -o -name *.h -o -name *.cc -o -name *.swift -o -name *.yaml -o -name *.md -o -name *.gradle -o -name *.xml -o -name *.cmake -o -name *.rc -o -name *.podspec -o -name *.xcconfig -o -name *.pbxproj -o -name *.storyboard -o -name *.plist -o -name *.json -o -name *.lock -o -name CMakeLists.txt \\\\\\))",
+      "Bash(xargs grep:*)",
+      "Bash(mv hid4flutter_plugin.cpp hid_tool_plugin.cpp)",
+      "Bash(mv hid4flutter_plugin.h hid_tool_plugin.h)",
+      "Bash(mv hid4flutter_plugin_c_api.cpp hid_tool_plugin_c_api.cpp)",
+      "Bash(cd:*)",
+      "Bash(mv hid4flutter_plugin.cc hid_tool_plugin.cc)",
+      "Bash(mv hid4flutter_plugin_private.h hid_tool_plugin_private.h)",
+      "Bash(mv include/hid4flutter include/hid_tool)"
+    ]
+  }
+}
