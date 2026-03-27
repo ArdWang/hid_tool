@@ -264,6 +264,7 @@ class HidDeviceDesktop extends HidDevice {
   ///
   /// Throws an [StateError] if the device is not open.
   /// Throws an [HidException] if the attempt to send the report fails.
+  @override
   Future<void> sendOutputReport(Uint8List data, {int reportId = 0x00}) async {
     if (!isOpen) {
       throw StateError('Device is not open.');

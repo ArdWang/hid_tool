@@ -11,6 +11,11 @@ project(${PROJECT_NAME} LANGUAGES CXX)
 # versions of CMake.
 cmake_policy(VERSION 3.10...3.20)
 
+# Add hidapi subdirectory (embedded source, no git submodule required)
+get_filename_component(THIS_FILE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+get_filename_component(PLUGIN_ROOT_DIR "${THIS_FILE_DIR}/.." ABSOLUTE)
+add_subdirectory("${PLUGIN_ROOT_DIR}/third_party/hidapi" "${CMAKE_CURRENT_BINARY_DIR}/hidapi")
+
 # This value is used when generating builds using this plugin, so it must
 # not be changed.
 set(PLUGIN_NAME "hid_tool_plugin")
@@ -44,6 +49,7 @@ target_include_directories(${PLUGIN_NAME} INTERFACE
   "${CMAKE_CURRENT_SOURCE_DIR}/include")
 target_link_libraries(${PLUGIN_NAME} PRIVATE flutter)
 target_link_libraries(${PLUGIN_NAME} PRIVATE PkgConfig::GTK)
+target_link_libraries(${PLUGIN_NAME} PRIVATE hidapi::hidapi)
 
 # List of absolute paths to libraries that should be bundled with the plugin.
 # This list could contain prebuilt libraries, or libraries created by an

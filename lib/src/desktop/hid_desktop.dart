@@ -9,7 +9,7 @@ import 'package:hid_tool/src/desktop/hid_device_desktop.dart';
 class HidWindows extends _HidDesktop {
   HidWindows(super.hidapi);
 
-  static registerWith() {
+  static void registerWith() {
     final hidapi = NativeLibrary(DynamicLibrary.open('hidapi.dll'));
     HidPlatform.instance = HidWindows(hidapi);
   }
@@ -18,7 +18,7 @@ class HidWindows extends _HidDesktop {
 class HidMacos extends _HidDesktop {
   HidMacos(super.hidapi);
 
-  static registerWith() {
+  static void registerWith() {
     final hidapi = NativeLibrary(DynamicLibrary.executable());
     HidPlatform.instance = HidMacos(hidapi);
   }
@@ -27,7 +27,7 @@ class HidMacos extends _HidDesktop {
 class HidLinux extends _HidDesktop {
   HidLinux(super.hidapi);
 
-  static registerWith() {
+  static void registerWith() {
     final hidapi = NativeLibrary(DynamicLibrary.open('libhidapi-hidraw.so.0'));
     HidPlatform.instance = HidLinux(hidapi);
   }

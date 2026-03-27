@@ -1,0 +1,6 @@
+# See https://dart.dev/tools/pub/pubspec.html
+
+# Exclude build artifacts and unnecessary files
+build/
+example/build/
+*.log

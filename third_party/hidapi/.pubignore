@@ -1,0 +1,8 @@
+# See https://dart.dev/tools/pub/pubspec.html
+
+# Exclude test GUI and documentation from publishing
+exclude:
+  - hidtest/
+  - testgui/
+  - doxygen/
+  - documentation/

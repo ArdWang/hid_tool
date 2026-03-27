@@ -2,7 +2,7 @@ import 'package:hid_tool/src/hid_device.dart';
 import 'package:hid_tool/src/hid_platform_interface.dart';
 
 class HidAndroid extends HidPlatform {
-  static registerWith() {
+  static void registerWith() {
     HidPlatform.instance = HidAndroid();
   }
 

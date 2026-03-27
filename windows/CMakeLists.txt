@@ -12,7 +12,7 @@ project(${PROJECT_NAME} LANGUAGES CXX)
 # versions of CMake.
 cmake_policy(VERSION 3.14...3.20)
 
-# Add hidapi subdirectory
+# Add hidapi subdirectory (embedded source, no git submodule required)
 # CMAKE_CURRENT_LIST_FILE gives the actual file path (not symlink)
 get_filename_component(THIS_FILE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 get_filename_component(PLUGIN_ROOT_DIR "${THIS_FILE_DIR}/.." ABSOLUTE)

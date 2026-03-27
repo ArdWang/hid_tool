@@ -16,7 +16,15 @@
       "Bash(flutter clean:*)",
       "Bash(flutter pub:*)",
       "Bash(flutter build:*)",
-      "Bash(find macos:*)"
+      "Bash(find macos:*)",
+      "Bash(git clone:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(git ls-remote:*)",
+      "Bash(git ls-tree:*)",
+      "WebFetch(domain:pub.dev)",
+      "Bash(curl -sL https://pub.dev/api/packages/hid4flutter/versions/0.1.2)",
+      "Bash(curl -sL https://pub.dev/api/archives/hid4flutter-0.1.2.tar.gz -o /tmp/hid4flutter_pub.tar.gz)",
+      "Bash(tar -tzf /tmp/hid4flutter_pub.tar.gz)"
     ]
   }
 }
