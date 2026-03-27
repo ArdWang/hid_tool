@@ -10,6 +10,15 @@ This project is a fork/modified version of [hid4flutter](https://github.com/vins
 
 ---
 
+## [0.0.3] - 2026-03-27
+- Fix CMake configuration to properly link hidapi on MacOS.
+- 修复 CMake 配置以正确连接 MacOS 上的 hidapi
+
+## [0.0.2] - 2026-03-27
+
+- Fix CMake configuration to properly link hidapi on Windows.
+- 修复 CMake 配置以正确连接 Windows上的 hidapi
+
 ## [0.0.1] - 2026-03-26
 
 ### Added (新增)
