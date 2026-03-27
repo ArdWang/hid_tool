@@ -13,7 +13,10 @@ project(${PROJECT_NAME} LANGUAGES CXX)
 cmake_policy(VERSION 3.14...3.20)
 
 # Add hidapi subdirectory
-add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../third_party/hidapi")
+# CMAKE_CURRENT_LIST_FILE gives the actual file path (not symlink)
+get_filename_component(THIS_FILE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+get_filename_component(PLUGIN_ROOT_DIR "${THIS_FILE_DIR}/.." ABSOLUTE)
+add_subdirectory("${PLUGIN_ROOT_DIR}/third_party/hidapi" "${CMAKE_CURRENT_BINARY_DIR}/hidapi")
 
 # This value is used when generating builds using this plugin, so it must
 # not be changed

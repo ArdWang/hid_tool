@@ -11,7 +11,12 @@
       "Bash(cd:*)",
       "Bash(mv hid4flutter_plugin.cc hid_tool_plugin.cc)",
       "Bash(mv hid4flutter_plugin_private.h hid_tool_plugin_private.h)",
-      "Bash(mv include/hid4flutter include/hid_tool)"
+      "Bash(mv include/hid4flutter include/hid_tool)",
+      "Bash(git submodule:*)",
+      "Bash(flutter clean:*)",
+      "Bash(flutter pub:*)",
+      "Bash(flutter build:*)",
+      "Bash(find macos:*)"
     ]
   }
 }
