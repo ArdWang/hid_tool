@@ -10,6 +10,17 @@ This project is a fork/modified version of [hid4flutter](https://github.com/vins
 
 ---
 
+## [0.0.7] - 2026-03-30
+
+### Fixed (修复)
+
+- Fixed macOS build error "cannot find 'kIOHIDDevicePathKey' in scope" by defining the constant manually.
+  - 通过手动定义常量修复了 macOS 构建错误 "cannot find 'kIOHIDDevicePathKey' in scope'"
+- Added `kIOHIDDevicePathKey` constant declaration in Swift file since IOKit submodules cannot be imported directly.
+  - 在 Swift 文件中添加了 `kIOHIDDevicePathKey` 常量声明，因为无法直接导入 IOKit 子模块
+
+---
+
 ## [0.0.6] - 2026-03-30
 
 ### Fixed (修复)

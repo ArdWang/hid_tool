@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'hid_tool'
-  s.version          = '0.0.6'
+  s.version          = '0.0.7'
   s.summary          = 'A flutter plugin for HID.'
   s.description      = <<-DESC
 A flutter plugin for communicating with HID devices (Human Interface Device).
