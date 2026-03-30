@@ -10,6 +10,44 @@ This project is a fork/modified version of [hid4flutter](https://github.com/vins
 
 ---
 
+## [0.0.4] - 2026-03-30
+
+### Added (新增)
+
+- Added `getReportDescriptor()` method to get and parse the HID report descriptor from the device (requires hidapi 0.14.0+).
+  - 添加了 `getReportDescriptor()` 方法以从设备获取并解析 HID 报告描述符（需要 hidapi 0.14.0+）
+- Added `HidReportDescriptor` class to represent parsed report descriptor with collections and report items.
+  - 添加了 `HidReportDescriptor` 类以表示解析后的报告描述符，包含集合和报告项
+- Added `HidCollection` class to represent HID collections with nested structure support.
+  - 添加了 `HidCollection` 类以表示 HID 集合，支持嵌套结构
+- Added `HidReportItem` class to represent input/output/feature report items with full descriptor information.
+  - 添加了 `HidReportItem` 类以表示输入/输出/功能报告项，包含完整的描述符信息
+- Added `HidReportType` enum for report type identification.
+  - 添加了 `HidReportType` 枚举用于报告类型识别
+- Added `HidReportDescriptorParser` class to parse raw descriptor bytes into structured objects.
+  - 添加了 `HidReportDescriptorParser` 类以将原始描述符字节解析为结构化对象
+- Added `HidDeviceEvents` class for listening to device connection/disconnection events on Windows, macOS, and Linux.
+  - 添加了 `HidDeviceEvents` 类用于在 Windows、macOS 和 Linux 上监听设备连接/断开事件
+- Added `HidDeviceEvent` class to represent a device connection/disconnection event with path, vendor ID, and product ID.
+  - 添加了 `HidDeviceEvent` 类以表示设备连接/断开事件，包含路径、供应商 ID 和产品 ID
+- Added `Hid.startListening()` and `Hid.stopListening()` methods for managing device event listeners.
+  - 添加了 `Hid.startListening()` 和 `Hid.stopListening()` 方法用于管理设备事件监听器
+- Implemented Windows platform device notification using `RegisterDeviceNotification` API.
+  - 使用 `RegisterDeviceNotification` API 实现了 Windows 平台设备通知
+- Implemented macOS platform device notification using IOKit framework.
+  - 使用 IOKit 框架实现了 macOS 平台设备通知
+- Implemented Linux platform device notification using udev/netlink.
+  - 使用 udev/netlink 实现了 Linux 平台设备通知
+
+### Changed (更改)
+
+- Updated README.md with documentation and examples for the new report descriptor API.
+  - 更新了 README.md，添加了新报告描述符 API 的文档和示例
+- Updated README.md with documentation and examples for device event listening API.
+  - 更新了 README.md，添加了设备事件监听 API 的文档和示例
+
+---
+
 ## [0.0.3] - 2026-03-27
 - Fix CMake configuration to properly link hidapi on MacOS.
 - 修复 CMake 配置以正确连接 MacOS 上的 hidapi

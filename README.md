@@ -85,6 +85,25 @@ On macOS, the hidapi dependency is automatically managed by CocoaPods.
 
 On Windows, hidapi is compiled automatically as part of the build process.
 
+## Example Application
+
+A complete example application is available in the [`example/`](example/) directory. The example demonstrates:
+
+- **Device enumeration** - List all connected HID devices
+- **Event listening** - Real-time device connection/disconnection events
+- **Report descriptor parsing** - Fetch and display device report descriptors
+- **Device details view** - View comprehensive device information
+
+### Running the Example
+
+```bash
+cd example
+flutter pub get
+flutter run
+```
+
+See [example/README.md](example/README.md) for detailed documentation.
+
 ## Usage
 
 ### Initialize and Get Devices
@@ -276,6 +295,49 @@ try {
 }
 ```
 
+### Get HID Report Descriptor
+
+```dart
+final HidDevice device = ...;
+
+try {
+  await device.open();
+
+  // Get the HID report descriptor from the device
+  // This method is available since hidapi 0.14.0+
+  HidReportDescriptor descriptor = await device.getReportDescriptor();
+
+  // Access the raw bytes
+  print('Raw descriptor: ${descriptor.rawBytes}');
+
+  // Access parsed collections
+  print('Collections: ${descriptor.collections.length}');
+  for (var collection in descriptor.collections) {
+    print('  Collection: UsagePage=0x${collection.usagePage.toRadixString(16)}, '
+          'Usage=0x${collection.usage.toRadixString(16)}, '
+          'Type=${collection.collectionType}');
+    print('    Items: ${collection.items.length}');
+    print('    Children: ${collection.children.length}');
+  }
+
+  // Access parsed input/output/feature items
+  print('Input items: ${descriptor.inputs.length}');
+  print('Output items: ${descriptor.outputs.length}');
+  print('Feature items: ${descriptor.features.length}');
+
+  // Example: iterate over all input items
+  for (var input in descriptor.inputs) {
+    print('  Input: ReportId=${input.reportId}, '
+          'UsagePage=0x${input.usagePage.toRadixString(16)}, '
+          'ReportSize=${input.reportSize}, '
+          'ReportCount=${input.reportCount}');
+  }
+
+} finally {
+  await device.close();
+}
+```
+
 ## API Reference
 
 ### HidDevice Properties
@@ -309,13 +371,105 @@ try {
 | `sendFeatureReport(data, reportId)` | Send a Feature report |
 | `receiveFeatureReport(reportId, bufferSize)` | Receive a Feature report |
 | `getIndexedString(index, maxLength)` | Get a string by its index |
+| `getReportDescriptor()` | Get and parse the HID report descriptor (hidapi 0.14.0+) |
+
+### Report Descriptor Classes
+
+| Class | Description |
+|-------|-------------|
+| `HidReportDescriptor` | Represents a parsed HID report descriptor |
+| `HidCollection` | Represents a HID collection in the descriptor |
+| `HidReportItem` | Represents a report item (Input/Output/Feature) |
+| `HidReportType` | Enum for report type (input/output/feature) |
+
+### HidReportDescriptor Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `rawBytes` | Uint8List | The raw bytes of the report descriptor |
+| `collections` | List<HidCollection> | Top-level collections in the descriptor |
+| `inputs` | List<HidReportItem> | All input report items |
+| `outputs` | List<HidReportItem> | All output report items |
+| `features` | List<HidReportItem> | All feature report items |
+
+### HidCollection Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `usagePage` | int | The usage page of this collection |
+| `usage` | int | The usage of this collection |
+| `collectionType` | int | The type of collection (Physical, Application, Logical, etc.) |
+| `children` | List<HidCollection> | Child collections (nested collections) |
+| `items` | List<HidReportItem> | Report items directly in this collection |
+| `parent` | HidCollection? | Parent collection (null for top-level collections) |
+
+### HidReportItem Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `reportType` | HidReportType | The type of report item (Input, Output, Feature) |
+| `reportId` | int | The report ID (0 if not used) |
+| `usagePage` | int | The usage page for this item |
+| `usage` | int? | The usage for this item |
+| `usageMinimum` | int? | The minimum usage (for ranges) |
+| `usageMaximum` | int? | The maximum usage (for ranges) |
+| `logicalMinimum` | int? | The logical minimum value |
+| `logicalMaximum` | int? | The logical maximum value |
+| `physicalMinimum` | int? | The physical minimum value |
+| `physicalMaximum` | int? | The physical maximum value |
+| `reportSize` | int | The size of each report field in bits |
+| `reportCount` | int | The number of report fields |
+| `unitExponent` | int? | The unit exponent |
+| `unit` | int? | The unit |
+| `isArray` | bool | Whether the item is an array |
+| `isAbsolute` | bool | Whether the item uses absolute positioning |
+| `hasNull` | bool | Whether null state is supported |
+| `isVariable` | bool | Whether this item has variable size |
+| `bitPosition` | int | Bit position in the report |
+
+## Device Connection/Disconnection Events
+
+The plugin provides a stream-based API for listening to HID device connection and disconnection events without polling.
+
+### Example Usage
+
+```dart
+import 'package:hid_tool/hid_tool.dart';
+
+// Start listening for device events
+await Hid.startListening();
+
+// Listen for device connected events
+HidDeviceEvents.onConnected.listen((event) {
+  print('Device connected: ${event.path}');
+  print('  Vendor ID: 0x${event.vendorId?.toRadixString(16) ?? 'unknown'}');
+  print('  Product ID: 0x${event.productId?.toRadixString(16) ?? 'unknown'}');
+});
+
+// Listen for device disconnected events
+HidDeviceEvents.onDisconnected.listen((event) {
+  print('Device disconnected: ${event.path}');
+});
+
+// Stop listening when no longer needed
+await Hid.stopListening();
+```
+
+### HidDeviceEvent Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `path` | String | The device path identifier |
+| `vendorId` | int? | The vendor ID of the device |
+| `productId` | int? | The product ID of the device |
+| `timestamp` | DateTime | The timestamp of the event |
 
 ## Planned Features
 
 These features are planned for future releases:
 
-- **Get Device HID Report Descriptor**: Request the report descriptor from the device and return it as a structured object representing the HID collections.
-- **Device Connection/Disconnection Events**: Add the ability to listen for device connection/disconnection events to avoid polling `getDevices()` function.
+- **Android Support**: Add Android platform support using MethodChannel and Android HID API.
+- **Web Support**: Add Web platform support using WebHID API.
 
 ## Error Handling
 
@@ -417,6 +571,25 @@ sudo apt-get install libhidapi-hidraw0
 #### Windows
 
 在 Windows 上，hidapi 作为构建过程的一部分自动编译。
+
+## 示例应用
+
+完整的示例应用可在 [`example/`](example/) 目录中找到。示例展示了：
+
+- **设备枚举** - 列出所有连接的 HID 设备
+- **事件监听** - 实时的设备连接/断开事件
+- **报告描述符解析** - 获取并显示设备报告描述符
+- **设备详情视图** - 查看全面的设备信息
+
+### 运行示例
+
+```bash
+cd example
+flutter pub get
+flutter run
+```
+
+详细文档请参见 [example/README.md](example/README.md)。
 
 ## 使用方法
 
@@ -609,6 +782,49 @@ try {
 }
 ```
 
+### 获取 HID 报告描述符
+
+```dart
+final HidDevice device = ...;
+
+try {
+  await device.open();
+
+  // 从设备获取 HID 报告描述符
+  // 此方法在 hidapi 0.14.0+ 版本可用
+  HidReportDescriptor descriptor = await device.getReportDescriptor();
+
+  // 访问原始字节
+  print('原始描述符：${descriptor.rawBytes}');
+
+  // 访问解析后的集合
+  print('集合数：${descriptor.collections.length}');
+  for (var collection in descriptor.collections) {
+    print('  集合：UsagePage=0x${collection.usagePage.toRadixString(16)}, '
+          'Usage=0x${collection.usage.toRadixString(16)}, '
+          '类型=${collection.collectionType}');
+    print('    项数：${collection.items.length}');
+    print('    子集合数：${collection.children.length}');
+  }
+
+  // 访问解析后的输入/输出/功能项
+  print('输入项数：${descriptor.inputs.length}');
+  print('输出项数：${descriptor.outputs.length}');
+  print('功能项数：${descriptor.features.length}');
+
+  // 示例：遍历所有输入项
+  for (var input in descriptor.inputs) {
+    print('  输入：ReportId=${input.reportId}, '
+          'UsagePage=0x${input.usagePage.toRadixString(16)}, '
+          'ReportSize=${input.reportSize}, '
+          'ReportCount=${input.reportCount}');
+  }
+
+} finally {
+  await device.close();
+}
+```
+
 ## API 参考
 
 ### HidDevice 属性
@@ -642,13 +858,105 @@ try {
 | `sendFeatureReport(data, reportId)` | 发送功能报告 |
 | `receiveFeatureReport(reportId, bufferSize)` | 接收功能报告 |
 | `getIndexedString(index, maxLength)` | 按索引获取字符串 |
+| `getReportDescriptor()` | 获取并解析 HID 报告描述符（hidapi 0.14.0+） |
+
+### 报告描述符类
+
+| 类 | 描述 |
+|------|------|
+| `HidReportDescriptor` | 表示解析后的 HID 报告描述符 |
+| `HidCollection` | 表示描述符中的 HID 集合 |
+| `HidReportItem` | 表示报告项（输入/输出/功能） |
+| `HidReportType` | 报告类型枚举（输入/输出/功能） |
+
+### HidReportDescriptor 属性
+
+| 属性 | 类型 | 描述 |
+|------|------|------|
+| `rawBytes` | Uint8List | 报告描述符的原始字节 |
+| `collections` | List<HidCollection> | 描述符中的顶层集合 |
+| `inputs` | List<HidReportItem> | 所有输入报告项 |
+| `outputs` | List<HidReportItem> | 所有输出报告项 |
+| `features` | List<HidReportItem> | 所有功能报告项 |
+
+### HidCollection 属性
+
+| 属性 | 类型 | 描述 |
+|------|------|------|
+| `usagePage` | int | 集合的使用页 |
+| `usage` | int | 集合的使用 |
+| `collectionType` | int | 集合类型（物理、应用、逻辑等） |
+| `children` | List<HidCollection> | 子集合（嵌套集合） |
+| `items` | List<HidReportItem> | 此集合中的报告项 |
+| `parent` | HidCollection? | 父集合（顶层集合为 null） |
+
+### HidReportItem 属性
+
+| 属性 | 类型 | 描述 |
+|------|------|------|
+| `reportType` | HidReportType | 报告项类型（输入、输出、功能） |
+| `reportId` | int | 报告 ID（未使用时为 0） |
+| `usagePage` | int | 项的使用页 |
+| `usage` | int? | 项的使用 |
+| `usageMinimum` | int? | 最小使用值（范围） |
+| `usageMaximum` | int? | 最大使用值（范围） |
+| `logicalMinimum` | int? | 逻辑最小值 |
+| `logicalMaximum` | int? | 逻辑最大值 |
+| `physicalMinimum` | int? | 物理最小值 |
+| `physicalMaximum` | int? | 物理最大值 |
+| `reportSize` | int | 每个报告字段的位数 |
+| `reportCount` | int | 报告字段数量 |
+| `unitExponent` | int? | 单位指数 |
+| `unit` | int? | 单位 |
+| `isArray` | bool | 是否为数组 |
+| `isAbsolute` | bool | 是否使用绝对定位 |
+| `hasNull` | bool | 是否支持 null 状态 |
+| `isVariable` | bool | 是否为变量大小 |
+| `bitPosition` | int | 报告中的位位置 |
+
+## 设备连接/断开事件
+
+插件提供基于流的 API 来监听 HID 设备连接和断开事件，无需轮询。
+
+### 使用示例
+
+```dart
+import 'package:hid_tool/hid_tool.dart';
+
+// 开始监听设备事件
+await Hid.startListening();
+
+// 监听设备连接事件
+HidDeviceEvents.onConnected.listen((event) {
+  print('设备已连接：${event.path}');
+  print('  供应商 ID: 0x${event.vendorId?.toRadixString(16) ?? 'unknown'}');
+  print('  产品 ID: 0x${event.productId?.toRadixString(16) ?? 'unknown'}');
+});
+
+// 监听设备断开事件
+HidDeviceEvents.onDisconnected.listen((event) {
+  print('设备已断开：${event.path}');
+});
+
+// 不再需要时停止监听
+await Hid.stopListening();
+```
+
+### HidDeviceEvent 属性
+
+| 属性 | 类型 | 描述 |
+|------|------|------|
+| `path` | String | 设备路径标识符 |
+| `vendorId` | int? | 设备的供应商 ID |
+| `productId` | int? | 设备的产品 ID |
+| `timestamp` | DateTime | 事件时间戳 |
 
 ## 计划功能
 
 这些功能计划在将来的版本中添加：
 
-- **获取设备 HID 报告描述符**：从设备请求报告描述符，并将其作为表示 HID 集合的结构化对象返回。
-- **设备连接/断开事件**：添加监听设备连接/断开事件的能力，以避免轮询 `getDevices()` 函数。
+- **Android 支持**：使用 MethodChannel 和 Android HID API 添加 Android 平台支持。
+- **Web 支持**：使用 WebHID API 添加 Web 平台支持。
 
 ## 错误处理
 

@@ -6,13 +6,15 @@
 
 #include <memory>
 
+#include <windows.h>
+
 namespace hid_tool {
 
 class HidToolPlugin : public flutter::Plugin {
  public:
   static void RegisterWithRegistrar(flutter::PluginRegistrarWindows *registrar);
 
-  HidToolPlugin();
+  HidToolPlugin(flutter::PluginRegistrarWindows *registrar);
 
   virtual ~HidToolPlugin();
 
@@ -24,6 +26,15 @@ class HidToolPlugin : public flutter::Plugin {
   void HandleMethodCall(
       const flutter::MethodCall<flutter::EncodableValue> &method_call,
       std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result);
+
+ private:
+  // Window procedure for handling device notifications
+  static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+
+  // Notify HIDL for HID device events
+  flutter::PluginRegistrarWindows* registrar_;
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel_;
+  HWND hwnd_;
 };
 
 }  // namespace hid_tool

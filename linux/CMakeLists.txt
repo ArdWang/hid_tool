@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.10...3.20)
 
 # Project-level configuration.
 set(PROJECT_NAME "hid_tool")
-project(${PROJECT_NAME} LANGUAGES CXX)
+project(${PROJECT_NAME} LANGUAGES C)
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
@@ -15,6 +15,10 @@ cmake_policy(VERSION 3.10...3.20)
 get_filename_component(THIS_FILE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 get_filename_component(PLUGIN_ROOT_DIR "${THIS_FILE_DIR}/.." ABSOLUTE)
 add_subdirectory("${PLUGIN_ROOT_DIR}/third_party/hidapi" "${CMAKE_CURRENT_BINARY_DIR}/hidapi")
+
+# Find required packages
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(UDEV REQUIRED IMPORTED_TARGET libudev)
 
 # This value is used when generating builds using this plugin, so it must
 # not be changed.
@@ -50,6 +54,7 @@ target_include_directories(${PLUGIN_NAME} INTERFACE
 target_link_libraries(${PLUGIN_NAME} PRIVATE flutter)
 target_link_libraries(${PLUGIN_NAME} PRIVATE PkgConfig::GTK)
 target_link_libraries(${PLUGIN_NAME} PRIVATE hidapi::hidapi)
+target_link_libraries(${PLUGIN_NAME} PRIVATE PkgConfig::UDEV)
 
 # List of absolute paths to libraries that should be bundled with the plugin.
 # This list could contain prebuilt libraries, or libraries created by an

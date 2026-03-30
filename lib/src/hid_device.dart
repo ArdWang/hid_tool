@@ -21,6 +21,16 @@ import 'hid_exception.dart';
 /// await device.close();
 /// ```
 abstract class HidDevice {
+  /// Get the HID report descriptor from the device.
+  ///
+  /// Since version 0.14.0, @ref HID_API_VERSION >= HID_API_MAKE_VERSION(0, 14, 0)
+  ///
+  /// Returns a [HidReportDescriptor] object containing the parsed report descriptor
+  /// structure, including collections, inputs, outputs, and features.
+  ///
+  /// Throws an [StateError] if the device is not open.
+  /// Throws an [HidException] if the attempt to get the report descriptor fails.
+  Future<HidReportDescriptor> getReportDescriptor();
   /// Get the HidDevice unique id.
   String get id;
 
@@ -158,16 +168,202 @@ abstract class HidDevice {
     return '''
       HidDevice [
         id=$path,
-        path=$path, 
-        vendorId=0x${vendorId.toRadixString(16)}, 
+        path=$path,
+        vendorId=0x${vendorId.toRadixString(16)},
         productId=0x${productId.toRadixString(16)},
-        serialNumber=$serialNumber, 
-        releaseNumber=0x${releaseNumber.toRadixString(16)}, 
-        manufacturer=$manufacturer, 
-        productName=$productName, 
-        usagePage=0x${usagePage.toRadixString(16)}, 
-        usage=0x${usage.toRadixString(16)}, 
+        serialNumber=$serialNumber,
+        releaseNumber=0x${releaseNumber.toRadixString(16)},
+        manufacturer=$manufacturer,
+        productName=$productName,
+        usagePage=0x${usagePage.toRadixString(16)},
+        usage=0x${usage.toRadixString(16)},
         interfaceNumber=$interfaceNumber
       ]''';
   }
+}
+
+/// Represents a parsed HID report descriptor.
+///
+/// Contains the hierarchical structure of collections and report items
+/// extracted from the raw HID report descriptor bytes.
+class HidReportDescriptor {
+  /// The raw bytes of the report descriptor
+  final Uint8List rawBytes;
+
+  /// Top-level collections in the report descriptor
+  final List<HidCollection> collections;
+
+  /// All input report items
+  final List<HidReportItem> inputs;
+
+  /// All output report items
+  final List<HidReportItem> outputs;
+
+  /// All feature report items
+  final List<HidReportItem> features;
+
+  HidReportDescriptor({
+    required this.rawBytes,
+    required this.collections,
+    required this.inputs,
+    required this.outputs,
+    required this.features,
+  });
+
+  @override
+  String toString() {
+    return 'HidReportDescriptor(collections: ${collections.length}, '
+        'inputs: ${inputs.length}, outputs: ${outputs.length}, '
+        'features: ${features.length})';
+  }
+}
+
+/// Represents a HID collection in the report descriptor.
+///
+/// Collections group related controls together, such as a keyboard,
+/// mouse, or joystick.
+class HidCollection {
+  /// The usage page of this collection
+  final int usagePage;
+
+  /// The usage of this collection
+  final int usage;
+
+  /// The type of collection (Physical, Application, Logical, etc.)
+  final int collectionType;
+
+  /// Child collections (nested collections)
+  final List<HidCollection> children;
+
+  /// Report items directly in this collection
+  final List<HidReportItem> items;
+
+  /// Parent collection (null for top-level collections)
+  final HidCollection? parent;
+
+  HidCollection({
+    required this.usagePage,
+    required this.usage,
+    required this.collectionType,
+    required this.children,
+    required this.items,
+    this.parent,
+  });
+
+  @override
+  String toString() {
+    return 'HidCollection(usagePage: 0x${usagePage.toRadixString(16)}, '
+        'usage: 0x${usage.toRadixString(16)}, '
+        'type: $collectionType, children: ${children.length}, '
+        'items: ${items.length})';
+  }
+}
+
+/// Represents a single report item (Input, Output, or Feature).
+class HidReportItem {
+  /// The type of report item (Input, Output, Feature)
+  final HidReportType reportType;
+
+  /// The report ID (0 if not used)
+  final int reportId;
+
+  /// The usage page for this item
+  final int usagePage;
+
+  /// The usage for this item
+  final int? usage;
+
+  /// The minimum usage (for ranges)
+  final int? usageMinimum;
+
+  /// The maximum usage (for ranges)
+  final int? usageMaximum;
+
+  /// The logical minimum value
+  final int? logicalMinimum;
+
+  /// The logical maximum value
+  final int? logicalMaximum;
+
+  /// The physical minimum value
+  final int? physicalMinimum;
+
+  /// The physical maximum value
+  final int? physicalMaximum;
+
+  /// The size of each report field in bits
+  final int reportSize;
+
+  /// The number of report fields
+  final int reportCount;
+
+  /// The unit exponent
+  final int? unitExponent;
+
+  /// The unit
+  final int? unit;
+
+  /// Designator index
+  final int? designatorIndex;
+
+  /// String index
+  final int? stringIndex;
+
+  /// Whether the item is an array
+  final bool isArray;
+
+  /// Whether the item uses absolute positioning
+  final bool isAbsolute;
+
+  /// Whether null state is supported
+  final bool hasNull;
+
+  /// Whether this item has variable size
+  final bool isVariable;
+
+  /// Bit position in the report
+  final int bitPosition;
+
+  HidReportItem({
+    required this.reportType,
+    required this.reportId,
+    required this.usagePage,
+    this.usage,
+    this.usageMinimum,
+    this.usageMaximum,
+    this.logicalMinimum,
+    this.logicalMaximum,
+    this.physicalMinimum,
+    this.physicalMaximum,
+    required this.reportSize,
+    required this.reportCount,
+    this.unitExponent,
+    this.unit,
+    this.designatorIndex,
+    this.stringIndex,
+    required this.isArray,
+    required this.isAbsolute,
+    required this.hasNull,
+    required this.isVariable,
+    required this.bitPosition,
+  });
+
+  @override
+  String toString() {
+    return 'HidReportItem(type: $reportType, reportId: $reportId, '
+        'usagePage: 0x${usagePage.toRadixString(16)}, '
+        'reportSize: $reportSize, reportCount: $reportCount)';
+  }
+}
+
+/// Type of HID report
+enum HidReportType {
+  /// Input report - data sent from device to host
+  input,
+
+  /// Output report - data sent from host to device
+  output,
+
+  /// Feature report - configuration data exchanged via control transfers
+  feature,
 }

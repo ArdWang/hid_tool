@@ -2,6 +2,9 @@
 #define FLUTTER_PLUGIN_HID_TOOL_PLUGIN_H_
 
 #include <flutter_linux/flutter_linux.h>
+#include <libudev.h>
+#include <pthread.h>
+#include <poll.h>
 
 G_BEGIN_DECLS
 

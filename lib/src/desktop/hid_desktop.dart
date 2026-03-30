@@ -86,6 +86,19 @@ class _HidDesktop extends HidPlatform {
     return devices;
   }
 
+  @override
+  Future<void> startListening() async {
+    // Device event listening is handled by the platform-specific code
+    // This method is called from Dart to notify the platform layer
+    // The actual event stream is managed by the MethodChannel handler
+  }
+
+  @override
+  Future<void> stopListening() async {
+    // Device event listening is handled by the platform-specific code
+    // This method is called from Dart to notify the platform layer
+  }
+
   void _onDeviceOpen(HidDevice device) {
     _openDevices.add(device);
   }

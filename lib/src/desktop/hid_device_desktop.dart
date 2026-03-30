@@ -8,6 +8,7 @@ import 'package:hid_tool/src/hid_device.dart';
 import 'package:hid_tool/src/hid_exception.dart';
 import 'package:hid_tool/src/desktop/extensions.dart';
 import 'package:hid_tool/src/desktop/hidapi_ffi.dart';
+import 'package:hid_tool/src/desktop/hid_report_descriptor_parser.dart';
 
 class HidDeviceDesktop extends HidDevice {
   final String _path;
@@ -304,6 +305,34 @@ class HidDeviceDesktop extends HidDevice {
         throw HidException('Failed to get indexed string with $index index. '
             'Error: ${_getLastErrorMessage()}');
       }
+    });
+  }
+
+  @override
+  Future<HidReportDescriptor> getReportDescriptor() async {
+    if (!isOpen) {
+      throw StateError('Device is not open.');
+    }
+
+    return using((arena) {
+      // Use the recommended buffer size from HID_API
+      const bufferSize = 4096;
+      var buffer = arena<Uint8>(bufferSize);
+
+      int result = _hidapi.hid_get_report_descriptor(
+          _device, buffer.cast<UnsignedChar>(), bufferSize);
+
+      if (result == -1) {
+        throw HidException('Failed to get report descriptor. '
+            'Error: ${_getLastErrorMessage()}');
+      }
+
+      // Convert to Uint8List
+      final rawBytes = Uint8List.fromList(buffer.asTypedList(result));
+
+      // Parse the descriptor
+      final parser = HidReportDescriptorParser();
+      return parser.parse(rawBytes);
     });
   }
 

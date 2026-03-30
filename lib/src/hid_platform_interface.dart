@@ -28,4 +28,14 @@ abstract class HidPlatform extends PlatformInterface {
     int? usagePage,
     int? usage,
   });
+
+  /// Start listening for HID device connection/disconnection events.
+  Future<void> startListening() {
+    throw UnimplementedError('startListening() has not been implemented.');
+  }
+
+  /// Stop listening for HID device connection/disconnection events.
+  Future<void> stopListening() {
+    throw UnimplementedError('stopListening() has not been implemented.');
+  }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hid_tool/hid_tool.dart';
+import 'dart:typed_data';
 
 void main() {
   runApp(const MyApp());
@@ -28,11 +29,19 @@ class DeviceListScreen extends StatefulWidget {
 
 class DeviceListScreenState extends State<DeviceListScreen> {
   List<HidDevice> devices = [];
+  List<String> eventLog = [];
+  bool isListening = false;
 
   @override
   void initState() {
     super.initState();
     _loadConnectedDevices();
+  }
+
+  @override
+  void dispose() {
+    _stopListening();
+    super.dispose();
   }
 
   Future<void> _loadConnectedDevices() async {
@@ -41,10 +50,75 @@ class DeviceListScreenState extends State<DeviceListScreen> {
       setState(() {
         devices = connectedDevices;
       });
+      _addLog('Found ${devices.length} device(s)');
     } catch (e) {
-      // ignore: avoid_print
-      print('Error getting connected devices: $e');
+      _addLog('Error getting connected devices: $e');
     }
+  }
+
+  Future<void> _startListening() async {
+    if (isListening) return;
+
+    try {
+      await Hid.startListening();
+
+      // Listen for device connected events
+      HidDeviceEvents.onConnected.listen((event) {
+        setState(() {
+          _addLog('Device Connected: ${event.path}');
+          _addLog('  VID: 0x${event.vendorId?.toRadixString(16) ?? "unknown"}');
+          _addLog('  PID: 0x${event.productId?.toRadixString(16) ?? "unknown"}');
+        });
+        // Refresh device list after a short delay
+        Future.delayed(const Duration(milliseconds: 500), _loadConnectedDevices);
+      });
+
+      // Listen for device disconnected events
+      HidDeviceEvents.onDisconnected.listen((event) {
+        setState(() {
+          _addLog('Device Disconnected: ${event.path}');
+        });
+        // Refresh device list after a short delay
+        Future.delayed(const Duration(milliseconds: 500), _loadConnectedDevices);
+      });
+
+      setState(() {
+        isListening = true;
+        _addLog('Started listening for device events');
+      });
+    } catch (e) {
+      _addLog('Error starting event listening: $e');
+    }
+  }
+
+  Future<void> _stopListening() async {
+    if (!isListening) return;
+
+    try {
+      await Hid.stopListening();
+      setState(() {
+        isListening = false;
+        _addLog('Stopped listening for device events');
+      });
+    } catch (e) {
+      _addLog('Error stopping event listening: $e');
+    }
+  }
+
+  void _addLog(String message) {
+    final timestamp = DateTime.now().toString().substring(11, 19);
+    eventLog.insert(0, '[$timestamp] $message');
+    // Keep only last 50 log entries
+    if (eventLog.length > 50) {
+      eventLog.removeRange(50, eventLog.length);
+    }
+  }
+
+  Future<void> _showDeviceDetails(HidDevice device) async {
+    showDialog(
+      context: context,
+      builder: (context) => DeviceDetailDialog(device: device),
+    );
   }
 
   @override
@@ -52,15 +126,96 @@ class DeviceListScreenState extends State<DeviceListScreen> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text('Connected Devices'),
+        title: const Text('HID Tool Example'),
+        actions: [
+          IconButton(
+            icon: Icon(isListening ? Icons.stop_circle : Icons.play_circle),
+            tooltip: isListening ? 'Stop Event Listening' : 'Start Event Listening',
+            onPressed: () {
+              if (isListening) {
+                _stopListening();
+              } else {
+                _startListening();
+              }
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh Devices',
+            onPressed: _loadConnectedDevices,
+          ),
+        ],
       ),
-      body: _buildDeviceList(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => {
-          _loadConnectedDevices(),
-        },
-        tooltip: 'Refresh',
-        child: const Icon(Icons.refresh),
+      body: Column(
+        children: [
+          // Event Log Section
+          Container(
+            height: 150,
+            width: double.infinity,
+            margin: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.black87,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Event Log',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: Colors.greenAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const Divider(color: Colors.grey),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: eventLog.length,
+                    itemBuilder: (context, index) {
+                      return Text(
+                        eventLog[index],
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          // Device List Section
+          Expanded(
+            child: _buildDeviceList(),
+          ),
+        ],
+      ),
+      floatingActionButton: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton.small(
+            heroTag: 'logBtn',
+            onPressed: () {
+              setState(() {
+                eventLog.clear();
+                _addLog('Log cleared');
+              });
+            },
+            tooltip: 'Clear Log',
+            child: const Icon(Icons.delete_sweep),
+          ),
+          const SizedBox(width: 8),
+          FloatingActionButton(
+            heroTag: 'refreshBtn',
+            onPressed: _loadConnectedDevices,
+            tooltip: 'Refresh',
+            child: const Icon(Icons.refresh),
+          ),
+        ],
       ),
     );
   }
@@ -68,7 +223,16 @@ class DeviceListScreenState extends State<DeviceListScreen> {
   Widget _buildDeviceList() {
     if (devices.isEmpty) {
       return const Center(
-        child: Text('No connected devices'),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.usb_off, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('No HID devices found'),
+            SizedBox(height: 8),
+            Text('Connect a HID device or start event listening'),
+          ],
+        ),
       );
     }
 
@@ -79,26 +243,214 @@ class DeviceListScreenState extends State<DeviceListScreen> {
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: ListTile(
-            title: Text('Device $index'),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Path: ${device.path}'),
-                Text('Vendor ID: 0x${device.vendorId.toRadixString(16)}'),
-                Text('Product ID: 0x${device.productId.toRadixString(16)}'),
-                Text('Serial Number: ${device.serialNumber}'),
-                Text('Release Number: ${device.releaseNumber}'),
-                Text('Manufacturer: ${device.manufacturer}'),
-                Text('Product Name: ${device.productName}'),
-                Text('Usage Page: 0x${device.usagePage.toRadixString(16)}'),
-                Text('Usage: 0x${device.usage.toRadixString(16)}'),
-                Text('Interface Number: ${device.interfaceNumber}'),
-                Text('Bus Type: ${device.busType}'),
-              ],
+            leading: const Icon(Icons.usb, size: 40),
+            title: Text(device.productName.isNotEmpty
+                ? device.productName
+                : 'Device $index'),
+            subtitle: Text(
+                'VID: 0x${device.vendorId.toRadixString(16)} | PID: 0x${device.productId.toRadixString(16)}'),
+            trailing: IconButton(
+              icon: const Icon(Icons.info_outline),
+              onPressed: () => _showDeviceDetails(device),
             ),
+            onTap: () => _showDeviceDetails(device),
           ),
         );
       },
+    );
+  }
+}
+
+class DeviceDetailDialog extends StatefulWidget {
+  final HidDevice device;
+
+  const DeviceDetailDialog({super.key, required this.device});
+
+  @override
+  State<DeviceDetailDialog> createState() => _DeviceDetailDialogState();
+}
+
+class _DeviceDetailDialogState extends State<DeviceDetailDialog> {
+  bool isLoading = false;
+  String? reportDescriptorInfo;
+  Uint8List? rawDescriptor;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReportDescriptor();
+  }
+
+  Future<void> _loadReportDescriptor() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    try {
+      await widget.device.open();
+      final descriptor = await widget.device.getReportDescriptor();
+      rawDescriptor = descriptor.rawBytes;
+
+      // Format descriptor information
+      final sb = StringBuffer();
+      sb.writeln('Report Descriptor Size: ${descriptor.rawBytes.length} bytes');
+      sb.writeln('');
+      sb.writeln('Collections: ${descriptor.collections.length}');
+      sb.writeln('Input Items: ${descriptor.inputs.length}');
+      sb.writeln('Output Items: ${descriptor.outputs.length}');
+      sb.writeln('Feature Items: ${descriptor.features.length}');
+      sb.writeln('');
+      sb.writeln('Raw Bytes (hex):');
+      sb.writeln(_formatHexDump(descriptor.rawBytes));
+
+      await widget.device.close();
+
+      setState(() {
+        reportDescriptorInfo = sb.toString();
+      });
+    } catch (e) {
+      setState(() {
+        reportDescriptorInfo = 'Error loading report descriptor: $e';
+      });
+    } finally {
+      setState(() {
+        isLoading = false;
+      });
+    }
+  }
+
+  String _formatHexDump(Uint8List data) {
+    final sb = StringBuffer();
+    for (int i = 0; i < data.length; i += 16) {
+      sb.write(i.toRadixString(16).padLeft(4, '0'));
+      sb.write(': ');
+      for (int j = 0; j < 16 && i + j < data.length; j++) {
+        sb.write(data[i + j].toRadixString(16).padLeft(2, '0'));
+        sb.write(' ');
+      }
+      sb.writeln();
+    }
+    return sb.toString();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text(widget.device.productName.isNotEmpty
+          ? widget.device.productName
+          : 'Device Details'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildInfoSection('Device Information', _buildDeviceInfo()),
+              const SizedBox(height: 16),
+              _buildInfoSection('Report Descriptor', _buildDescriptorContent()),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInfoSection(String title, Widget content) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        const Divider(),
+        content,
+      ],
+    );
+  }
+
+  Widget _buildDeviceInfo() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildInfoRow('Path', widget.device.path),
+        _buildInfoRow('Vendor ID', '0x${widget.device.vendorId.toRadixString(16)}'),
+        _buildInfoRow('Product ID', '0x${widget.device.productId.toRadixString(16)}'),
+        _buildInfoRow('Serial Number', widget.device.serialNumber.isEmpty ? 'N/A' : widget.device.serialNumber),
+        _buildInfoRow('Release Number', '0x${widget.device.releaseNumber.toRadixString(16)}'),
+        _buildInfoRow('Manufacturer', widget.device.manufacturer.isEmpty ? 'N/A' : widget.device.manufacturer),
+        _buildInfoRow('Product Name', widget.device.productName.isEmpty ? 'N/A' : widget.device.productName),
+        _buildInfoRow('Usage Page', '0x${widget.device.usagePage.toRadixString(16)}'),
+        _buildInfoRow('Usage', '0x${widget.device.usage.toRadixString(16)}'),
+        _buildInfoRow('Interface Number', '${widget.device.interfaceNumber}'),
+        _buildInfoRow('Bus Type', '${widget.device.busType}'),
+      ],
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(color: Colors.grey),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDescriptorContent() {
+    if (isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (reportDescriptorInfo == null) {
+      return const Text('Tap "Load Descriptor" to fetch report descriptor');
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.black87,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: SelectableText(
+            reportDescriptorInfo!,
+            style: const TextStyle(
+              color: Colors.greenAccent,
+              fontSize: 11,
+              fontFamily: 'monospace',
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
