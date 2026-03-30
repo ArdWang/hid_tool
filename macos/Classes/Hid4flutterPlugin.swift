@@ -1,8 +1,6 @@
 import Cocoa
 import FlutterMacOS
 import IOKit
-import IOKit.hid.IOHIDLib
-import IOKit.usb
 
 public class HidToolPlugin: NSObject, FlutterPlugin {
     var channel: FlutterMethodChannel?
