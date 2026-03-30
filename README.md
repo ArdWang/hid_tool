@@ -1,6 +1,6 @@
 # hid_tool
 
-[![pub](https://img.shields.io/badge/pub-0.0.1-blue)](https://pub.dev/packages/hid_tool)
+[![pub](https://img.shields.io/badge/pub-0.0.6-blue)](https://pub.dev/packages/hid_tool)
 [![license: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
 English | [中文](#中文)
@@ -46,10 +46,10 @@ Add the following line to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  hid_tool: ^0.0.1
+  hid_tool: ^0.0.6
 ```
 
-Replace `^0.0.1` with the latest version of the plugin.
+Replace `^0.0.6` with the latest version of the plugin.
 
 ### Step 2: Install Dependencies
 
@@ -533,7 +533,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ```yaml
 dependencies:
-  hid_tool: ^0.0.1
+  hid_tool: ^0.0.6
 ```
 
 将 `^0.0.1` 替换为插件的最新版本。

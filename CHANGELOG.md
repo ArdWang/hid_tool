@@ -10,6 +10,48 @@ This project is a fork/modified version of [hid4flutter](https://github.com/vins
 
 ---
 
+## [0.0.6] - 2026-03-30
+
+### Fixed (修复)
+
+- Fixed macOS build error "no such module 'IOKit.hid.IOHIDLib'" by removing invalid import statements.
+  - 修复 macOS 构建错误 "no such module 'IOKit.hid.IOHIDLib'"，移除了无效的导入语句
+- Added `IOKit` framework to macOS podspec for proper linking.
+  - 在 macOS podspec 中添加了 `IOKit` 框架以正确链接
+- Updated macOS minimum deployment target to 10.13 (Xcode compatible version).
+  - 更新 macOS 最低部署目标到 10.13（Xcode 兼容版本）
+- Fixed Windows compilation errors:
+  - 修复了 Windows 编译错误：
+  - GUID redefinition error in `hid_tool_plugin.cpp`
+  - MethodChannel `InvokeMethod` type mismatch for device events
+  - `GUID_DEVINTERFACE_HID` 重定义错误
+  - MethodChannel `InvokeMethod` 类型不匹配
+- Added `.claude/` to `.gitignore` to prevent Claude Code settings from being committed.
+  - 添加 `.claude/` 到 `.gitignore` 防止 Claude Code 设置被提交
+
+### Changed (更改)
+
+- Updated all platform implementations to ensure consistent build experience.
+  - 更新了所有平台实现以确保一致的构建体验
+
+---
+
+## [0.0.5] - 2026-03-30
+
+### Added (新增)
+
+- Added `.gitignore` entry for `.claude/` directory.
+  - 添加了 `.claude/` 目录的 `.gitignore` 条目
+
+### Changed (更改)
+
+- Improved macOS device event listening implementation.
+  - 改进了 macOS 设备事件监听实现
+- Updated device event listening to start only when explicitly called.
+  - 更新设备事件监听仅在显式调用时启动
+
+---
+
 ## [0.0.4] - 2026-03-30
 
 ### Added (新增)
