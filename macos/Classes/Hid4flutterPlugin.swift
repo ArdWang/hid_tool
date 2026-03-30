@@ -2,6 +2,11 @@ import Cocoa
 import FlutterMacOS
 import IOKit
 
+// HID Device Property Keys
+// These constants are defined in IOKit/hid/IOHIDKeys.h but need to be declared manually
+// since Swift cannot import IOKit submodules directly
+let kIOHIDDevicePathKey = "IOHIDDevicePath"
+
 public class HidToolPlugin: NSObject, FlutterPlugin {
     var channel: FlutterMethodChannel?
 
