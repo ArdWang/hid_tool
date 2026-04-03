@@ -1,6 +1,6 @@
 name: hid_tool
 description: 'A flutter plugin for communicating with HID devices (Human Interface Device)'
-version: 0.0.7
+version: 0.0.8
 homepage: https://github.com/ArdWang/hid_tool
 repository: https://github.com/ArdWang/hid_tool
 

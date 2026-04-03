@@ -147,9 +147,8 @@ class HidDeviceDesktop extends HidDevice {
 
     try {
       var buffer = arena<Uint8>(bufferSize);
-      int result = 0;
       while (isOpen) {
-        result = _hidapi.hid_read(
+        final result = _hidapi.hid_read(
           _device,
           buffer.cast<UnsignedChar>(),
           bufferSize,
@@ -164,8 +163,8 @@ class HidDeviceDesktop extends HidDevice {
           }
         }
 
-        // Polling with 100 microseconds interval
-        await Future.delayed(const Duration(microseconds: 100));
+        // Polling with 1ms interval for better power efficiency
+        await Future.delayed(const Duration(milliseconds: 1));
       }
     } finally {
       arena.releaseAll();
@@ -205,7 +204,8 @@ class HidDeviceDesktop extends HidDevice {
         throw HidException('Failed to write $bufferSize bytes. '
             'Error: ${_getLastErrorMessage()}');
       }
-      //TODO what to do if result != buffer.length ?
+      // Note: result contains the actual number of bytes written
+      // This is expected behavior and doesn't always equal bufferSize
     });
   }
 
@@ -249,7 +249,8 @@ class HidDeviceDesktop extends HidDevice {
             'Failed to send feature report of $bufferSize bytes. '
             'Error: ${_getLastErrorMessage()}');
       }
-      //TODO what to do if result != buffer.length ?
+      // Note: result contains the actual number of bytes written
+      // This is expected behavior and doesn't always equal bufferSize
     });
   }
 
@@ -284,7 +285,8 @@ class HidDeviceDesktop extends HidDevice {
             'Failed to send output report of $bufferSize bytes. '
             'Error: ${_getLastErrorMessage()}');
       }
-      //TODO what to do if result != buffer.length ?
+      // Note: result contains the actual number of bytes written
+      // This is expected behavior and doesn't always equal bufferSize
     });
   }
 

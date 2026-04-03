@@ -58,20 +58,9 @@ class HidReportDescriptorParser {
     final prefix = bytes[offset];
     final tag = prefix & 0xFC;
     final type = (prefix >> 2) & 0x03;
+    // Size type: 0=0 bytes, 1=1 byte, 2=2 bytes, 3=4 bytes
     final sizeType = prefix & 0x03;
-
-    int dataSize;
-    if (sizeType == 3) {
-      // Reserved, treat as size type 4 bytes
-      dataSize = 4;
-    } else {
-      dataSize = sizeType;
-    }
-
-    // Special case: size type 3 means 4 bytes
-    if (sizeType == 3) {
-      dataSize = 4;
-    }
+    final dataSize = sizeType == 3 ? 4 : sizeType;
 
     int data = 0;
     for (int i = 0; i < dataSize && offset + 1 + i < bytes.length; i++) {
