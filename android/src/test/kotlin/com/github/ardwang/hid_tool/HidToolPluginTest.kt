@@ -1,4 +1,4 @@
-package com.github.vinsfortunato.hid_tool
+package com.github.ardwang.hid_tool
 
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
@@ -25,3 +25,4 @@ internal class HidToolPluginTest {
     Mockito.verify(mockResult).success("Android " + android.os.Build.VERSION.RELEASE)
   }
 }
+

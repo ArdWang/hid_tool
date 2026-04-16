@@ -8,6 +8,24 @@ This project is a fork/modified version of [hid4flutter](https://github.com/vins
 
 ---
 
+## [0.0.9] - 2026-04-16
+
+### Added
+
+- Added Android HID support using MethodChannel and Android USB HID APIs
+
+### Changed
+
+- Updated package version to `0.0.9`
+- Removed unimplemented iOS/Web platform declarations from `pubspec.yaml`
+- Updated `README.md` and `README_cn.md` platform documentation and version examples for `0.0.9`
+
+### Fixed
+
+- Removed legacy Android source package directories under `com/github/vinsfortunato/hid_tool`
+
+---
+
 ## [0.0.8] - 2026-04-03
 
 ### Changed

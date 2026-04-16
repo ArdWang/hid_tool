@@ -8,6 +8,24 @@
 
 ---
 
+## [0.0.9] - 2026-04-16
+
+### 新增
+
+- 添加 Android HID 支持（基于 MethodChannel 和 Android USB HID API）
+
+### 更改
+
+- 更新版本号到 `0.0.9`
+- 从 `pubspec.yaml` 中移除未实现的 iOS/Web 平台声明
+- 更新 `README.md` 与 `README_cn.md` 中的平台说明和 `0.0.9` 版本示例
+
+### 修复
+
+- 移除 `com/github/vinsfortunato/hid_tool` 下遗留的 Android 旧包目录
+
+---
+
 ## [0.0.8] - 2026-04-03
 
 ### 更改

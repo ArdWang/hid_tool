@@ -99,7 +99,10 @@ class HidDeviceEvents {
     });
 
     try {
-      if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      if (Platform.isWindows ||
+          Platform.isMacOS ||
+          Platform.isLinux ||
+          Platform.isAndroid) {
         await _channel.invokeMethod('startListening');
         _isListening = true;
       } else {
@@ -117,7 +120,10 @@ class HidDeviceEvents {
     }
 
     try {
-      if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      if (Platform.isWindows ||
+          Platform.isMacOS ||
+          Platform.isLinux ||
+          Platform.isAndroid) {
         await _channel.invokeMethod('stopListening');
         _isListening = false;
       }

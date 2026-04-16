@@ -1,6 +1,6 @@
 # hid_tool
 
-[![pub](https://img.shields.io/badge/pub-0.0.8-blue)](https://pub.dev/packages/hid_tool)
+[![pub](https://img.shields.io/badge/pub-0.0.9-blue)](https://pub.dev/packages/hid_tool)
 [![license: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
 [English](README.md) | 中文
@@ -18,7 +18,7 @@
 - [使用方法](#使用方法)
 - [API 参考](#api-参考)
 - [设备连接/断开事件](#设备连接断开事件)
-- [计划功能](#计划功能)
+- [后续计划](#后续计划)
 - [错误处理](#错误处理)
 - [已知问题和限制](#已知问题和限制)
 - [贡献](#贡献)
@@ -30,7 +30,7 @@
 
 `hid_tool` 是一个 Flutter 插件，用于在 Flutter 应用程序中与 HID（人机接口设备）设备进行通信。
 
-此插件提供了全面的 API，用于在多个桌面平台上与 HID 设备交互：
+此插件提供了全面的 API，用于在当前已支持的 Flutter 平台上与 HID 设备交互：
 
 - **设备枚举** - 列出所有连接的 HID 设备及其详细信息
 - **设备通信** - 发送和接收输入/输出/功能报告
@@ -55,17 +55,17 @@
 - ✅ Windows
 - ✅ macOS
 - ✅ Linux（需要手动安装 `libhidapi-hidraw0`，参见 [安装](#安装)）
+- ✅ Android
 
 ### 实现细节
 
-桌面平台（Windows/macOS/Linux）支持通过使用 [hidapi](https://github.com/libusb/hidapi)（版本 0.15.0）和 Dart FFI 实现。
+- 桌面平台（Windows/macOS/Linux）通过 [hidapi](https://github.com/libusb/hidapi)（版本 0.15.0）和 Dart FFI 实现。
+- Android 平台通过 MethodChannel 和 Android USB HID API 实现。
 
-### 计划支持的平台
+### 当前暂不支持
 
-计划在不久的将来添加以下平台的支持：
-
-- **Android**：可以使用 MethodChannel 和 Android HID API 支持。
-- **Web**：可以使用实验性的 WebHID API 支持 Web 平台。
+- iOS
+- Web
 
 ## 安装
 
@@ -75,10 +75,10 @@
 
 ```yaml
 dependencies:
-  hid_tool: ^0.0.8
+  hid_tool: ^0.0.9
 ```
 
-将 `^0.0.8` 替换为插件的最新版本。
+将 `^0.0.9` 替换为插件的最新版本。
 
 ### 步骤 2：安装依赖
 
@@ -493,11 +493,11 @@ await Hid.stopListening();
 | `productId` | int? | 设备的产品 ID |
 | `timestamp` | DateTime | 事件时间戳 |
 
-## 计划功能
+## 后续计划
 
 这些功能计划在将来的版本中添加：
 
-- **Android 支持**：使用 MethodChannel 和 Android HID API 添加 Android 平台支持。
+- **iOS 支持**：添加 iOS 平台支持。
 - **Web 支持**：使用 WebHID API 添加 Web 平台支持。
 
 ## 错误处理

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:hid_tool/hid_tool.dart';
 import 'dart:typed_data';
+import 'dart:async';
 
 void main() {
   runApp(const MyApp());
@@ -31,6 +32,8 @@ class DeviceListScreenState extends State<DeviceListScreen> {
   List<HidDevice> devices = [];
   List<String> eventLog = [];
   bool isListening = false;
+  StreamSubscription<HidDeviceEvent>? _connectedSubscription;
+  StreamSubscription<HidDeviceEvent>? _disconnectedSubscription;
 
   @override
   void initState() {
@@ -40,6 +43,8 @@ class DeviceListScreenState extends State<DeviceListScreen> {
 
   @override
   void dispose() {
+    _connectedSubscription?.cancel();
+    _disconnectedSubscription?.cancel();
     _stopListening();
     super.dispose();
   }
@@ -47,6 +52,7 @@ class DeviceListScreenState extends State<DeviceListScreen> {
   Future<void> _loadConnectedDevices() async {
     try {
       List<HidDevice> connectedDevices = await Hid.getDevices();
+      if (!mounted) return;
       setState(() {
         devices = connectedDevices;
       });
@@ -62,26 +68,36 @@ class DeviceListScreenState extends State<DeviceListScreen> {
     try {
       await Hid.startListening();
 
-      // Listen for device connected events
-      HidDeviceEvents.onConnected.listen((event) {
+      await _connectedSubscription?.cancel();
+      await _disconnectedSubscription?.cancel();
+
+      _connectedSubscription = HidDeviceEvents.onConnected.listen((event) {
+        if (!mounted) return;
         setState(() {
           _addLog('Device Connected: ${event.path}');
           _addLog('  VID: 0x${event.vendorId?.toRadixString(16) ?? "unknown"}');
           _addLog('  PID: 0x${event.productId?.toRadixString(16) ?? "unknown"}');
         });
-        // Refresh device list after a short delay
-        Future.delayed(const Duration(milliseconds: 500), _loadConnectedDevices);
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _loadConnectedDevices();
+          }
+        });
       });
 
-      // Listen for device disconnected events
-      HidDeviceEvents.onDisconnected.listen((event) {
+      _disconnectedSubscription = HidDeviceEvents.onDisconnected.listen((event) {
+        if (!mounted) return;
         setState(() {
           _addLog('Device Disconnected: ${event.path}');
         });
-        // Refresh device list after a short delay
-        Future.delayed(const Duration(milliseconds: 500), _loadConnectedDevices);
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) {
+            _loadConnectedDevices();
+          }
+        });
       });
 
+      if (!mounted) return;
       setState(() {
         isListening = true;
         _addLog('Started listening for device events');
@@ -96,6 +112,11 @@ class DeviceListScreenState extends State<DeviceListScreen> {
 
     try {
       await Hid.stopListening();
+      await _connectedSubscription?.cancel();
+      await _disconnectedSubscription?.cancel();
+      _connectedSubscription = null;
+      _disconnectedSubscription = null;
+      if (!mounted) return;
       setState(() {
         isListening = false;
         _addLog('Stopped listening for device events');
@@ -302,9 +323,6 @@ class _DeviceDetailDialogState extends State<DeviceDetailDialog> {
       sb.writeln('');
       sb.writeln('Raw Bytes (hex):');
       sb.writeln(_formatHexDump(descriptor.rawBytes));
-
-      await widget.device.close();
-
       setState(() {
         reportDescriptorInfo = sb.toString();
       });
@@ -313,6 +331,11 @@ class _DeviceDetailDialogState extends State<DeviceDetailDialog> {
         reportDescriptorInfo = 'Error loading report descriptor: $e';
       });
     } finally {
+      if (widget.device.isOpen) {
+        try {
+          await widget.device.close();
+        } catch (_) {}
+      }
       setState(() {
         isLoading = false;
       });

@@ -1,6 +1,6 @@
 # hid_tool
 
-[![pub](https://img.shields.io/badge/pub-0.0.8-blue)](https://pub.dev/packages/hid_tool)
+[![pub](https://img.shields.io/badge/pub-0.0.9-blue)](https://pub.dev/packages/hid_tool)
 [![license: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
 English | [中文](README_cn.md)
@@ -18,7 +18,7 @@ English | [中文](README_cn.md)
 - [Usage](#usage)
 - [API Reference](#api-reference)
 - [Device Connection/Disconnection Events](#device-connectiondisconnection-events)
-- [Planned Features](#planned-features)
+- [Roadmap](#roadmap)
 - [Error Handling](#error-handling)
 - [Known Issues and Limitations](#known-issues-and-limitations)
 - [Contributing](#contributing)
@@ -30,7 +30,7 @@ English | [中文](README_cn.md)
 
 `hid_tool` is a Flutter plugin that enables communication with HID (Human Interface Device) devices from a Flutter application.
 
-This plugin provides a comprehensive API for interacting with HID devices across multiple desktop platforms:
+This plugin provides a comprehensive API for interacting with HID devices across supported Flutter platforms:
 
 - **Device enumeration** - List all connected HID devices with detailed information
 - **Device communication** - Send and receive input/output/feature reports
@@ -55,17 +55,17 @@ Contributions are welcome! Feel free to submit issues and pull requests to help 
 - ✅ Windows
 - ✅ macOS
 - ✅ Linux (requires manual installation of `libhidapi-hidraw0`, see [Installation](#installation))
+- ✅ Android
 
 ### Implementation Details
 
-Desktop support (Windows/macOS/Linux) is achieved by using [hidapi](https://github.com/libusb/hidapi) (version 0.15.0) and Dart FFI.
+- Desktop platforms (Windows/macOS/Linux) use [hidapi](https://github.com/libusb/hidapi) (version 0.15.0) via Dart FFI.
+- Android uses MethodChannel with the Android USB HID APIs.
 
-### Planned Platform Support
+### Currently Not Supported
 
-Support for the following platforms is planned to be added in the near future:
-
-- **Android**: Can be supported using MethodChannel and Android HID API.
-- **Web**: Experimental WebHID API can be used to support the Web platform.
+- iOS
+- Web
 
 ## Installation
 
@@ -75,10 +75,10 @@ Add the following line to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  hid_tool: ^0.0.8
+  hid_tool: ^0.0.9
 ```
 
-Replace `^0.0.8` with the latest version of the plugin.
+Replace `^0.0.9` with the latest version of the plugin.
 
 ### Step 2: Install Dependencies
 
@@ -493,11 +493,11 @@ await Hid.stopListening();
 | `productId` | int? | The product ID of the device |
 | `timestamp` | DateTime | The timestamp of the event |
 
-## Planned Features
+## Roadmap
 
 These features are planned for future releases:
 
-- **Android Support**: Add Android platform support using MethodChannel and Android HID API.
+- **iOS Support**: Add iOS platform support.
 - **Web Support**: Add Web platform support using WebHID API.
 
 ## Error Handling
