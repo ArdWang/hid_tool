@@ -12,5 +12,7 @@ export 'web/hid_web.dart' if (dart.library.io) 'web/hid_web_stub.dart' show HidW
 // Desktop platforms (Windows, macOS, Linux) - uses stub on mobile/web
 export 'desktop/hid_desktop.dart' if (dart.library.html) 'desktop/hid_desktop_stub.dart' show HidWindows, HidMacos, HidLinux;
 
-// Android platform - uses stub on non-Android platforms
-export 'android/hid_android.dart' if (dart.library.io) 'android/hid_android_stub.dart' show HidAndroid;
+// Android platform - must come before web/desktop since android also has dart.library.io
+// On Android: export hid_android.dart
+// On non-Android platforms: export stub
+export 'android/hid_android.dart' if (dart.library.html) 'android/hid_android_stub.dart' show HidAndroid;
