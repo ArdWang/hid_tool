@@ -2,14 +2,13 @@
 export 'src/hid_device.dart';
 export 'src/hid_exception.dart';
 export 'src/hid_device_events.dart';
-
-// Export Web-specific types (stub on non-web)
-export 'src/web/hid_web.dart' show DeviceFilter;
+export 'src/device_filter.dart';
 
 // Import platform interface and Hid class
 import 'src/hid_platform_interface.dart';
 import 'src/hid_device_events.dart';
 import 'src/hid_device.dart';
+import 'src/device_filter.dart';
 
 // Import web implementation (uses stub on non-web platforms)
 import 'src/web/hid_web.dart' if (dart.library.io) 'src/web/hid_web_stub.dart' as webhid;
@@ -44,7 +43,7 @@ class Hid {
 
   /// Request device access from the user (Web only).
   static Future<List<HidDevice>> requestDevice({
-    List<webhid.DeviceFilter>? filters,
+    List<DeviceFilter>? filters,
   }) async {
     if (!webhid.HidWeb.isSupported) {
       throw UnsupportedError('requestDevice is only available on Web');

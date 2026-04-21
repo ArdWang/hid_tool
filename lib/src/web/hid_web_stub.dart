@@ -2,6 +2,7 @@
 
 import '../hid_device.dart';
 import '../hid_platform_interface.dart';
+import '../device_filter.dart';
 
 /// Stub implementation of HidWeb for non-web platforms.
 class HidWeb extends HidPlatform {
@@ -24,19 +25,4 @@ class HidWeb extends HidPlatform {
   }) {
     throw UnsupportedError('requestDevice is only available on Web');
   }
-}
-
-/// Device filter for WebHID.
-class DeviceFilter {
-  final int? vendorId;
-  final int? productId;
-  final int? usagePage;
-  final int? usage;
-
-  DeviceFilter({
-    this.vendorId,
-    this.productId,
-    this.usagePage,
-    this.usage,
-  });
 }

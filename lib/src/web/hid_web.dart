@@ -1,7 +1,8 @@
 /// Web platform implementation for HID devices.
 ///
 /// This implementation uses the browser's WebHID API.
-
+///
+/// @nodoc (internal implementation - use hid_tool.dart instead)
 import 'dart:async';
 import 'dart:js_interop';
 import 'dart:typed_data';
@@ -12,6 +13,7 @@ import '../hid_device.dart';
 import '../hid_exception.dart';
 import '../hid_platform_interface.dart';
 import '../hid_device_events.dart';
+import '../device_filter.dart';
 import 'interop/js_interop.dart';
 
 /// Web platform implementation of [HidPlatform].
@@ -452,20 +454,8 @@ class HidDeviceWeb extends HidDevice {
   }
 }
 
-/// Device filter for WebHID.
-class DeviceFilter {
-  final int? vendorId;
-  final int? productId;
-  final int? usagePage;
-  final int? usage;
-
-  DeviceFilter({
-    this.vendorId,
-    this.productId,
-    this.usagePage,
-    this.usage,
-  });
-
+/// Extension to convert DeviceFilter to JSDeviceFilter.
+extension DeviceFilterWeb on DeviceFilter {
   JSDeviceFilter toJS() {
     return JSDeviceFilter(
       vendorId: vendorId,
