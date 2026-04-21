@@ -1,6 +1,6 @@
 # hid_tool
 
-[![pub](https://img.shields.io/badge/pub-0.0.9-blue)](https://pub.dev/packages/hid_tool)
+[![pub](https://img.shields.io/badge/pub-0.1.0-blue)](https://pub.dev/packages/hid_tool)
 [![license: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
 [English](README.md) | 中文
@@ -18,6 +18,7 @@
 - [使用方法](#使用方法)
 - [API 参考](#api-参考)
 - [设备连接/断开事件](#设备连接断开事件)
+- [Web 平台支持](#web-平台支持)
 - [后续计划](#后续计划)
 - [错误处理](#错误处理)
 - [已知问题和限制](#已知问题和限制)
@@ -44,6 +45,12 @@
 
 原项目地址：[https://github.com/vinsfortunato/hid4flutter](https://github.com/vinsfortunato/hid4flutter)
 
+### WebHID 实现
+
+Web 平台的实现基于 [flutter_webhid](https://github.com/ph-design/flutter_webhid) by ph-design。我们使用 dart:js_interop 适配了他们的优秀 WebHID API 绑定，以便在 hid_tool 中使用。
+
+WebHID 项目地址：[https://github.com/ph-design/flutter_webhid](https://github.com/ph-design/flutter_webhid)
+
 ## 免责声明
 
 **警告：** 此插件目前处于开发阶段，API 可能会发生变化。在生产环境中使用风险自担。
@@ -56,16 +63,17 @@
 - ✅ macOS
 - ✅ Linux（需要手动安装 `libhidapi-hidraw0`，参见 [安装](#安装)）
 - ✅ Android
+- ✅ Web（Chrome/Edge 89+，需要 WebHID API）
 
 ### 实现细节
 
-- 桌面平台（Windows/macOS/Linux）通过 [hidapi](https://github.com/libusb/hidapi)（版本 0.15.0）和 Dart FFI 实现。
-- Android 平台通过 MethodChannel 和 Android USB HID API 实现。
+- **桌面平台**（Windows/macOS/Linux）通过 [hidapi](https://github.com/libusb/hidapi)（版本 0.15.0）和 Dart FFI 实现。
+- **Android** 通过 MethodChannel 和 Android USB HID API 实现。
+- **Web** 通过 [WebHID API](https://wicg.github.io/webhid/) 和 dart:js_interop 实现。
 
 ### 当前暂不支持
 
 - iOS
-- Web
 
 ## 安装
 
@@ -78,7 +86,7 @@ dependencies:
   hid_tool: ^0.0.9
 ```
 
-将 `^0.0.9` 替换为插件的最新版本。
+将 `^0.1.0` 替换为插件的最新版本。
 
 ### 步骤 2：安装依赖
 
@@ -113,6 +121,36 @@ sudo apt-get install libhidapi-hidraw0
 #### Windows
 
 在 Windows 上，hidapi 作为构建过程的一部分自动编译。
+
+#### Web
+
+在 Web 上，WebHID API 在 Chrome/Edge 89+ 中可用，需要：
+- 安全上下文（HTTPS 或 localhost）
+- 用户手势来请求设备访问权限（点击事件）
+- 浏览器权限已由用户授予
+
+要在 Web 应用中使用 WebHID：
+
+```dart
+import 'package:hid_tool/hid_tool.dart';
+
+// 检查是否支持 WebHID
+if (HidWeb.isSupported) {
+  // 请求设备访问权限（必须由用户手势触发）
+  final devices = await Hid.requestDevice(
+    filters: [
+      DeviceFilter(vendorId: 0x1234, productId: 0x5678),
+    ],
+  );
+
+  if (devices.isNotEmpty) {
+    final device = devices.first;
+    await device.open();
+    // 使用设备...
+    await device.close();
+  }
+}
+```
 
 ## 示例应用
 
@@ -493,12 +531,86 @@ await Hid.stopListening();
 | `productId` | int? | 设备的产品 ID |
 | `timestamp` | DateTime | 事件时间戳 |
 
+## Web 平台支持
+
+Web 平台的实现使用 [WebHID API](https://wicg.github.io/webhid/) 来实现浏览器中的 HID 设备通信。
+
+### 浏览器兼容性
+
+- ✅ Chrome 89+
+- ✅ Edge 89+
+- ✅ 其他支持 WebHID 的浏览器
+
+### 与桌面/移动端的主要区别
+
+1. **权限模型**：Web 需要用户通过浏览器对话框明确授予权限。使用 `Hid.requestDevice()` 显示权限提示。
+
+2. **安全上下文**：WebHID 仅在安全上下文中工作（HTTPS 或 localhost）。
+
+3. **用户手势**：`requestDevice()` 调用必须由用户手势触发（例如按钮点击）。
+
+4. **设备过滤器**：请求访问时应提供设备过滤器，仅向用户显示相关设备。
+
+### Web 示例
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:hid_tool/hid_tool.dart';
+
+class WebHidExample extends StatelessWidget {
+  Future<void> _connectDevice() async {
+    try {
+      // 使用过滤器请求设备访问权限
+      final devices = await Hid.requestDevice(
+        filters: [
+          DeviceFilter(vendorId: 0x046D), // 罗技
+          DeviceFilter(vendorId: 0x054C), // 索尼
+        ],
+      );
+
+      if (devices.isEmpty) {
+        print('未选择设备');
+        return;
+      }
+
+      final device = devices.first;
+      await device.open();
+
+      // 使用设备
+      final descriptor = await device.getReportDescriptor();
+      print('集合数：${descriptor.collections.length}');
+
+      await device.close();
+    } catch (e) {
+      print('错误：$e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: _connectDevice,
+      child: Text('连接 HID 设备'),
+    );
+  }
+}
+```
+
+### DeviceFilter 选项
+
+| 属性 | 类型 | 描述 |
+|------|------|------|
+| `vendorId` | int? | USB 供应商 ID (VID) |
+| `productId` | int? | USB 产品 ID (PID) |
+| `usagePage` | int? | HID 使用页 |
+| `usage` | int? | HID 使用 |
+
 ## 后续计划
 
 这些功能计划在将来的版本中添加：
 
+- ✅ **Web 支持**：使用 WebHID API 添加 Web 平台支持（已在 0.1.0 完成）
 - **iOS 支持**：添加 iOS 平台支持。
-- **Web 支持**：使用 WebHID API 添加 Web 平台支持。
 
 ## 错误处理
 
