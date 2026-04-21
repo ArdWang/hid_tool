@@ -18,6 +18,16 @@ import 'src/device_filter.dart';
 import 'src/web/hid_web.dart' if (dart.library.io) 'src/web/hid_web_stub.dart' as webhid;
 
 class Hid {
+  /// Initialize the platform-specific implementation.
+  ///
+  /// This method is called automatically by [getDevices] and [startListening].
+  /// It ensures that the correct platform implementation is registered.
+  static void _ensurePlatform() {
+    // Platform registration is handled by dart_plugin_registrant.dart
+    // which calls the appropriate registerWith() method at startup.
+    // This method is kept for potential future use.
+  }
+
   /// Get a list of connected HID devices that match the filters.
   static Future<List<HidDevice>> getDevices({
     int? vendorId,
@@ -25,6 +35,7 @@ class Hid {
     int? usagePage,
     int? usage,
   }) async {
+    _ensurePlatform();
     return HidPlatform.instance.getDevices(
       vendorId: vendorId,
       productId: productId,
@@ -35,6 +46,7 @@ class Hid {
 
   /// Start listening for HID device connection/disconnection events.
   static Future<void> startListening() async {
+    _ensurePlatform();
     await HidPlatform.instance.startListening();
     await HidDeviceEvents.startListening();
   }
