@@ -4,6 +4,10 @@ export 'src/hid_exception.dart';
 export 'src/hid_device_events.dart';
 export 'src/device_filter.dart';
 
+// Platform implementation exports for plugin registration
+// These are conditionally exported based on the target platform
+export 'src/platform_imports.dart';
+
 // Import platform interface and Hid class
 import 'src/hid_platform_interface.dart';
 import 'src/hid_device_events.dart';
