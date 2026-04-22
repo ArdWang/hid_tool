@@ -8,6 +8,39 @@ This project is a fork/modified version of [hid4flutter](https://github.com/vins
 
 ---
 
+## [0.1.0] - 2026-04-21
+
+### Added
+
+- **Web platform support** - Added WebHID API implementation for web browsers using dart:js_interop
+- **HidWeb class** - Web platform implementation extending HidPlatform with full WebHID API support
+- **HidWebDevice class** - Web device implementation with open/close/send/receive operations
+- **DeviceFilter class** - Type-safe device filter for WebHID device requests
+- **Hid.requestDevice()** - New method to request device access from users (Web only)
+- **Web example application** - Updated example app with WebHID support and platform-specific UI
+- **Web documentation** - Added Web platform usage guide and API documentation
+
+### Changed
+
+- Updated package version to `0.1.0`
+- Added `web` platform to `pubspec.yaml`
+- Added `web: ^1.1.0` dependency for WebHID interop
+- Updated `README.md` with Web platform documentation and examples
+- Updated supported platforms list to include Web (Chrome/Edge 89+)
+- Enhanced `Hid` class with platform registration logic
+- Updated example `pubspec.yaml` with web platform support
+
+### Technical Details
+
+- Created JS interop bindings for WebHID API (`JSHid`, `JSDevice`, `JSConnectionEvent`, etc.)
+- Implemented device enumeration with filter support for WebHID
+- Implemented connection/disconnection event streaming on Web
+- Added stub implementation for non-web platforms
+- Created web/index.html with WebHID feature detection
+- Created web/manifest.json for PWA support
+
+---
+
 ## [0.0.9] - 2026-04-16
 
 ### Added

@@ -1,28 +1,41 @@
+// Core exports - available on all platforms
 export 'src/hid_device.dart';
 export 'src/hid_exception.dart';
 export 'src/hid_device_events.dart';
+export 'src/device_filter.dart';
 
-import 'src/hid_device.dart';
+// Platform implementation exports for plugin registration
+// These are conditionally exported based on the target platform
+export 'src/platform_imports.dart';
+
+// Import platform interface and Hid class
 import 'src/hid_platform_interface.dart';
 import 'src/hid_device_events.dart';
-export 'src/android/hid_android.dart';
-export 'src/desktop/hid_desktop.dart';
+import 'src/hid_device.dart';
+import 'src/device_filter.dart';
+
+// Import web implementation (uses stub on non-web platforms)
+import 'src/web/hid_web.dart' if (dart.library.io) 'src/web/hid_web_stub.dart' as webhid;
 
 class Hid {
-  /// Get a list of connected HID devices that match the
-  /// filters passed in. If no filter is provided get all
-  /// connected devices.
+  /// Initialize the platform-specific implementation.
   ///
-  /// Example usage:
-  /// ```dart
-  /// List<HidDevice> devices = await getDevices(vendorId: 0x25, productId: 0x26);
-  /// ```
+  /// This method is called automatically by [getDevices] and [startListening].
+  /// It ensures that the correct platform implementation is registered.
+  static void _ensurePlatform() {
+    // Platform registration is handled by dart_plugin_registrant.dart
+    // which calls the appropriate registerWith() method at startup.
+    // This method is kept for potential future use.
+  }
+
+  /// Get a list of connected HID devices that match the filters.
   static Future<List<HidDevice>> getDevices({
     int? vendorId,
     int? productId,
     int? usagePage,
     int? usage,
-  }) {
+  }) async {
+    _ensurePlatform();
     return HidPlatform.instance.getDevices(
       vendorId: vendorId,
       productId: productId,
@@ -32,37 +45,30 @@ class Hid {
   }
 
   /// Start listening for HID device connection/disconnection events.
-  ///
-  /// This method enables the platform-specific event listeners and
-  /// allows you to receive events through [HidDeviceEvents.onConnected]
-  /// and [HidDeviceEvents.onDisconnected] streams.
-  ///
-  /// Example usage:
-  /// ```dart
-  /// // Start listening for events
-  /// await Hid.startListening();
-  ///
-  /// // Listen for device connected events
-  /// HidDeviceEvents.onConnected.listen((event) {
-  ///   print('Device connected: ${event.path}');
-  /// });
-  ///
-  /// // Listen for device disconnected events
-  /// HidDeviceEvents.onDisconnected.listen((event) {
-  ///   print('Device disconnected: ${event.path}');
-  /// });
-  /// ```
   static Future<void> startListening() async {
+    _ensurePlatform();
     await HidPlatform.instance.startListening();
     await HidDeviceEvents.startListening();
   }
 
   /// Stop listening for HID device events.
-  ///
-  /// Call this method when you no longer need to receive device
-  /// connection/disconnection events.
   static Future<void> stopListening() async {
     await HidDeviceEvents.stopListening();
     await HidPlatform.instance.stopListening();
   }
+
+  /// Request device access from the user (Web only).
+  static Future<List<HidDevice>> requestDevice({
+    List<DeviceFilter>? filters,
+  }) async {
+    if (!webhid.HidWeb.isSupported) {
+      throw UnsupportedError('requestDevice is only available on Web');
+    }
+
+    final webPlatform = HidPlatform.instance as webhid.HidWeb;
+    return webPlatform.requestDevice(filters: filters);
+  }
+
+  /// Check if WebHID is supported (Web only).
+  static bool get isWebHIDSupported => webhid.HidWeb.isSupported;
 }
