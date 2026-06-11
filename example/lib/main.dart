@@ -47,7 +47,13 @@ class DeviceListScreenState extends State<DeviceListScreen> {
   @override
   void initState() {
     super.initState();
-    _loadConnectedDevices();
+    // Defer to after first frame to avoid calling native FFI
+    // (hid_enumerate) during the widget build phase, which can
+    // trigger focus manager callbacks that cause setState() or
+    // markNeedsBuild() called during build assertions.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadConnectedDevices();
+    });
   }
 
   @override
@@ -334,7 +340,11 @@ class _DeviceDetailDialogState extends State<DeviceDetailDialog> {
   @override
   void initState() {
     super.initState();
-    _loadReportDescriptor();
+    // Defer to after first frame to avoid calling native FFI
+    // during the widget build phase.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadReportDescriptor();
+    });
   }
 
   Future<void> _loadReportDescriptor() async {
