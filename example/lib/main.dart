@@ -35,10 +35,25 @@ class DeviceListScreenState extends State<DeviceListScreen> {
   StreamSubscription<HidDeviceEvent>? _connectedSubscription;
   StreamSubscription<HidDeviceEvent>? _disconnectedSubscription;
 
+  // Check if running on web
+  bool get isWeb {
+    try {
+      return identical(0, 0.0); // Web-specific check
+    } catch (e) {
+      return false;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    _loadConnectedDevices();
+    // Defer to after first frame to avoid calling native FFI
+    // (hid_enumerate) during the widget build phase, which can
+    // trigger focus manager callbacks that cause setState() or
+    // markNeedsBuild() called during build assertions.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadConnectedDevices();
+    });
   }
 
   @override
@@ -59,6 +74,23 @@ class DeviceListScreenState extends State<DeviceListScreen> {
       _addLog('Found ${devices.length} device(s)');
     } catch (e) {
       _addLog('Error getting connected devices: $e');
+    }
+  }
+
+  /// Request device access (Web only)
+  Future<void> _requestDevice() async {
+    if (!isWeb) return;
+
+    try {
+      _addLog('Requesting device access...');
+      // On web, we need to request device access first
+      final webDevices = await Hid.requestDevice();
+      if (webDevices.isNotEmpty) {
+        _addLog('Granted access to ${webDevices.length} device(s)');
+        await _loadConnectedDevices();
+      }
+    } catch (e) {
+      _addLog('Error requesting device: $e');
     }
   }
 
@@ -149,17 +181,24 @@ class DeviceListScreenState extends State<DeviceListScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('HID Tool Example'),
         actions: [
-          IconButton(
-            icon: Icon(isListening ? Icons.stop_circle : Icons.play_circle),
-            tooltip: isListening ? 'Stop Event Listening' : 'Start Event Listening',
-            onPressed: () {
-              if (isListening) {
-                _stopListening();
-              } else {
-                _startListening();
-              }
-            },
-          ),
+          if (isWeb)
+            IconButton(
+              icon: const Icon(Icons.add_circle),
+              tooltip: 'Request Device Access',
+              onPressed: _requestDevice,
+            ),
+          if (!isWeb)
+            IconButton(
+              icon: Icon(isListening ? Icons.stop_circle : Icons.play_circle),
+              tooltip: isListening ? 'Stop Event Listening' : 'Start Event Listening',
+              onPressed: () {
+                if (isListening) {
+                  _stopListening();
+                } else {
+                  _startListening();
+                }
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh Devices',
@@ -170,45 +209,47 @@ class DeviceListScreenState extends State<DeviceListScreen> {
       body: Column(
         children: [
           // Event Log Section
-          Container(
-            height: 150,
-            width: double.infinity,
-            margin: const EdgeInsets.all(8),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.black87,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Event Log',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: Colors.greenAccent,
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const Divider(color: Colors.grey),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: eventLog.length,
-                    itemBuilder: (context, index) {
-                      return Text(
-                        eventLog[index],
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontFamily: 'monospace',
+          if (!isWeb) ...[
+            Container(
+              height: 150,
+              width: double.infinity,
+              margin: const EdgeInsets.all(8),
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black87,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Event Log',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: Colors.greenAccent,
+                          fontWeight: FontWeight.bold,
                         ),
-                      );
-                    },
                   ),
-                ),
-              ],
+                  const Divider(color: Colors.grey),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: eventLog.length,
+                      itemBuilder: (context, index) {
+                        return Text(
+                          eventLog[index],
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontFamily: 'monospace',
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const Divider(height: 1),
+            const Divider(height: 1),
+          ],
           // Device List Section
           Expanded(
             child: _buildDeviceList(),
@@ -299,7 +340,11 @@ class _DeviceDetailDialogState extends State<DeviceDetailDialog> {
   @override
   void initState() {
     super.initState();
-    _loadReportDescriptor();
+    // Defer to after first frame to avoid calling native FFI
+    // during the widget build phase.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadReportDescriptor();
+    });
   }
 
   Future<void> _loadReportDescriptor() async {

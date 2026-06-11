@@ -1,4 +1,5 @@
 import 'dart:ffi';
+import 'dart:io' show Platform;
 
 import 'package:ffi/ffi.dart';
 
@@ -22,14 +23,45 @@ extension CharPointerToString on Pointer<Char> {
 }
 
 extension WCharPointerToString on Pointer<WChar> {
+  /// Converts a wchar_t* to a Dart [String].
+  ///
+  /// On Windows, wchar_t is 2 bytes (UTF-16), so we cast to [Utf16].
+  /// On macOS/Linux/Android, wchar_t is 4 bytes (UTF-32), so we read
+  /// as [Uint32] and decode via [String.fromCharCodes].
   String toDartString({int? length}) {
     _ensureNotNullptr('toDartString');
-    if (length == null) {
-      return cast<Utf16>().toDartString();
+    if (Platform.isWindows) {
+      // Windows: wchar_t is 16-bit (UTF-16)
+      if (length == null) {
+        return cast<Utf16>().toDartString();
+      } else {
+        RangeError.checkNotNegative(length, 'length');
+        return cast<Utf16>().toDartString(length: length);
+      }
     } else {
-      RangeError.checkNotNegative(length, 'length');
-      return cast<Utf16>().toDartString(length: length);
+      // macOS/Linux/Android: wchar_t is 32-bit (UTF-32LE)
+      return _toDartStringFromUtf32(length: length);
     }
+  }
+
+  /// Reads wchar_t* as UTF-32LE (used on non-Windows platforms where
+  /// wchar_t is 4 bytes).
+  String _toDartStringFromUtf32({int? length}) {
+    final ptr32 = cast<Uint32>();
+    if (length != null) {
+      RangeError.checkNotNegative(length, 'length');
+      return String.fromCharCodes(ptr32.asTypedList(length));
+    }
+    // Read until null terminator (Uint32 value == 0)
+    final codes = <int>[];
+    var i = 0;
+    while (true) {
+      final code = ptr32[i];
+      if (code == 0) break;
+      codes.add(code);
+      i++;
+    }
+    return String.fromCharCodes(codes);
   }
 
   void _ensureNotNullptr(String operation) {

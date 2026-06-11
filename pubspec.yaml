@@ -1,18 +1,30 @@
 name: hid_tool
 description: 'A flutter plugin for communicating with HID devices (Human Interface Device)'
-version: 0.0.9
+version: 0.1.0
 homepage: https://github.com/ArdWang/hid_tool
 repository: https://github.com/ArdWang/hid_tool
+issue_tracker: https://github.com/ArdWang/hid_tool/issues
 
 environment:
-  sdk: '>=3.2.3 <4.0.0'
+  sdk: '>=3.5.0 <4.0.0'
   flutter: '>=3.3.0'
+
+platforms:
+  android:
+  #ios:
+  linux:
+  macos:
+  windows:
+  web:
 
 dependencies:
   ffi: ^2.1.0
   flutter:
     sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
   plugin_platform_interface: ^2.0.2
+  web: ^1.1.0
 
 dev_dependencies:
   flutter_test:
@@ -49,6 +61,9 @@ flutter:
       windows:
         pluginClass: HidToolPluginCApi
         dartPluginClass: HidWindows
+      web:
+        pluginClass: HidWeb
+        fileName: src/web/hid_tool_web_plugin.dart
 
   # To add assets to your plugin package, add an assets section, like this:
   # assets:
