@@ -18,7 +18,6 @@ English | [中文](README_cn.md)
 - [Usage](#usage)
 - [API Reference](#api-reference)
 - [Device Connection/Disconnection Events](#device-connectiondisconnection-events)
-- [Web Platform Support](#web-platform-support)
 - [Roadmap](#roadmap)
 - [Error Handling](#error-handling)
 - [Known Issues and Limitations](#known-issues-and-limitations)
@@ -45,12 +44,6 @@ This project is a fork/modified version of [hid4flutter](https://github.com/vins
 
 Original Project: [https://github.com/vinsfortunato/hid4flutter](https://github.com/vinsfortunato/hid4flutter)
 
-### WebHID Implementation
-
-The Web platform implementation is based on [flutter_webhid](https://github.com/ph-design/flutter_webhid) by ph-design. We adapted their excellent WebHID API bindings using dart:js_interop for use in hid_tool.
-
-WebHID Project: [https://github.com/ph-design/flutter_webhid](https://github.com/ph-design/flutter_webhid)
-
 ## Disclaimer
 
 **Warning:** This plugin is currently under development, and the API may be subject to change. Use it at your own risk in a production environment.
@@ -63,17 +56,16 @@ Contributions are welcome! Feel free to submit issues and pull requests to help 
 - ✅ macOS
 - ✅ Linux (requires manual installation of `libhidapi-hidraw0`, see [Installation](#installation))
 - ✅ Android
-- ✅ Web (Chrome/Edge 89+ with WebHID API)
 
 ### Implementation Details
 
 - **Desktop platforms** (Windows/macOS/Linux) use [hidapi](https://github.com/libusb/hidapi) (version 0.15.0) via Dart FFI.
 - **Android** uses MethodChannel with the Android USB HID APIs.
-- **Web** uses the [WebHID API](https://wicg.github.io/webhid/) via dart:js_interop.
 
 ### Currently Not Supported
 
 - iOS
+- Web
 
 ## Installation
 
@@ -118,39 +110,18 @@ sudo apt-get install libhidapi-hidraw0
 
 On macOS, the hidapi dependency is automatically managed by CocoaPods.
 
+If your macOS app uses App Sandbox (`com.apple.security.app-sandbox = true`), you must add the USB device access entitlement to your `DebugProfile.entitlements` and `Release.entitlements` files:
+
+```xml
+<key>com.apple.security.device.usb</key>
+<true/>
+```
+
+Without this entitlement, the sandbox will block HID device access, causing operations like `getReportDescriptor()` to fail.
+
 #### Windows
 
 On Windows, hidapi is compiled automatically as part of the build process.
-
-#### Web
-
-On Web, the WebHID API is available in Chrome/Edge 89+ and requires:
-- A secure context (HTTPS or localhost)
-- User gesture to request device access (click event)
-- Browser permission granted by the user
-
-To use WebHID in your web app:
-
-```dart
-import 'package:hid_tool/hid_tool.dart';
-
-// Check if WebHID is supported
-if (HidWeb.isSupported) {
-  // Request device access (must be triggered by user gesture)
-  final devices = await Hid.requestDevice(
-    filters: [
-      DeviceFilter(vendorId: 0x1234, productId: 0x5678),
-    ],
-  );
-
-  if (devices.isNotEmpty) {
-    final device = devices.first;
-    await device.open();
-    // Use the device...
-    await device.close();
-  }
-}
-```
 
 ## Example Application
 
@@ -531,87 +502,12 @@ await Hid.stopListening();
 | `productId` | int? | The product ID of the device |
 | `timestamp` | DateTime | The timestamp of the event |
 
-## Web Platform Support
-
-The Web platform implementation uses the [WebHID API](https://wicg.github.io/webhid/) to enable HID device communication from web browsers.
-
-### Browser Compatibility
-
-- ✅ Chrome 89+
-- ✅ Edge 89+
-- ✅ Other browsers with WebHID support
-
-### Key Differences from Desktop/Mobile
-
-1. **Permission Model**: Web requires explicit user permission via a browser dialog. Use `Hid.requestDevice()` to show the permission prompt.
-
-2. **Secure Context**: WebHID only works in secure contexts (HTTPS or localhost).
-
-3. **User Gesture**: The `requestDevice()` call must be triggered by a user gesture (e.g., button click).
-
-4. **Device Filters**: You should provide device filters when requesting access to show only relevant devices to the user.
-
-### Web Example
-
-```dart
-import 'package:flutter/material.dart';
-import 'package:hid_tool/hid_tool.dart';
-
-class WebHidExample extends StatelessWidget {
-  Future<void> _connectDevice() async {
-    try {
-      // Request device access with filters
-      final devices = await Hid.requestDevice(
-        filters: [
-          DeviceFilter(vendorId: 0x046D), // Logitech
-          DeviceFilter(vendorId: 0x054C), // Sony
-        ],
-      );
-
-      if (devices.isEmpty) {
-        print('No device selected');
-        return;
-      }
-
-      final device = devices.first;
-      await device.open();
-
-      // Use the device
-      final descriptor = await device.getReportDescriptor();
-      print('Collections: ${descriptor.collections.length}');
-
-      await device.close();
-    } catch (e) {
-      print('Error: $e');
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return ElevatedButton(
-      onPressed: _connectDevice,
-      child: Text('Connect HID Device'),
-    );
-  }
-}
-```
-
-### DeviceFilter Options
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `vendorId` | int? | USB Vendor ID (VID) |
-| `productId` | int? | USB Product ID (PID) |
-| `usagePage` | int? | HID Usage Page |
-| `usage` | int? | HID Usage |
-
 ## Roadmap
 
 These features are planned for future releases:
 
-- ✅ **Web Support**: Add Web platform support using WebHID API (Completed in 0.1.0)
+- **Web Support**: Add Web platform support using WebHID API.
 - **iOS Support**: Add iOS platform support.
-- **Enhanced WebHID**: Add support for advanced WebHID features like device filters and exclusion filters.
 
 ## Error Handling
 
@@ -634,14 +530,14 @@ try {
 
 1. **Send report response handling**: When using `sendReport()`, `sendOutputReport()`, or `sendFeatureReport()`, if the number of bytes sent differs from the expected buffer length, the current implementation does not handle this case. This is marked with TODO comments in the source code for future improvement.
 
-2. **Input stream polling**: The `inputStream()` method uses polling with a 100-microsecond interval. This may be adjusted in future versions for better performance or power efficiency.
+2. **Input stream polling**: The `inputStream()` method uses polling with a 1-millisecond interval. This may be adjusted in future versions for better performance or power efficiency.
 
 3. **Error handling for partial writes**: When sending reports, if a partial write occurs (result != buffer.length), the behavior is currently undefined and may be improved in future releases.
 
 ### Platform-Specific Limitations
 
 - **Linux**: Device event listening requires proper udev permissions. Some distributions may need additional configuration.
-- **macOS**: The minimum deployment target is macOS 10.13 due to Xcode compatibility requirements.
+- **macOS**: The minimum deployment target is macOS 10.13 due to Xcode compatibility requirements. App Sandbox must include `com.apple.security.device.usb` entitlement for HID access.
 - **Windows**: HID device access may require administrator privileges for certain devices.
 
 ## Contributing
