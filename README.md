@@ -1,6 +1,6 @@
 # hid_tool
 
-[![pub](https://img.shields.io/badge/pub-0.0.9-blue)](https://pub.dev/packages/hid_tool)
+[![pub](https://img.shields.io/badge/pub-0.1.0-blue)](https://pub.dev/packages/hid_tool)
 [![license: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
 English | [中文](README_cn.md)
@@ -59,8 +59,8 @@ Contributions are welcome! Feel free to submit issues and pull requests to help 
 
 ### Implementation Details
 
-- Desktop platforms (Windows/macOS/Linux) use [hidapi](https://github.com/libusb/hidapi) (version 0.15.0) via Dart FFI.
-- Android uses MethodChannel with the Android USB HID APIs.
+- **Desktop platforms** (Windows/macOS/Linux) use [hidapi](https://github.com/libusb/hidapi) (version 0.15.0) via Dart FFI.
+- **Android** uses MethodChannel with the Android USB HID APIs.
 
 ### Currently Not Supported
 
@@ -75,10 +75,10 @@ Add the following line to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  hid_tool: ^0.0.9
+  hid_tool: ^0.1.0
 ```
 
-Replace `^0.0.9` with the latest version of the plugin.
+Replace `^0.1.0` with the latest version of the plugin.
 
 ### Step 2: Install Dependencies
 
@@ -109,6 +109,15 @@ sudo apt-get install libhidapi-hidraw0
 #### macOS
 
 On macOS, the hidapi dependency is automatically managed by CocoaPods.
+
+If your macOS app uses App Sandbox (`com.apple.security.app-sandbox = true`), you must add the USB device access entitlement to your `DebugProfile.entitlements` and `Release.entitlements` files:
+
+```xml
+<key>com.apple.security.device.usb</key>
+<true/>
+```
+
+Without this entitlement, the sandbox will block HID device access, causing operations like `getReportDescriptor()` to fail.
 
 #### Windows
 
@@ -497,8 +506,8 @@ await Hid.stopListening();
 
 These features are planned for future releases:
 
-- **iOS Support**: Add iOS platform support.
 - **Web Support**: Add Web platform support using WebHID API.
+- **iOS Support**: Add iOS platform support.
 
 ## Error Handling
 
@@ -521,14 +530,14 @@ try {
 
 1. **Send report response handling**: When using `sendReport()`, `sendOutputReport()`, or `sendFeatureReport()`, if the number of bytes sent differs from the expected buffer length, the current implementation does not handle this case. This is marked with TODO comments in the source code for future improvement.
 
-2. **Input stream polling**: The `inputStream()` method uses polling with a 100-microsecond interval. This may be adjusted in future versions for better performance or power efficiency.
+2. **Input stream polling**: The `inputStream()` method uses polling with a 1-millisecond interval. This may be adjusted in future versions for better performance or power efficiency.
 
 3. **Error handling for partial writes**: When sending reports, if a partial write occurs (result != buffer.length), the behavior is currently undefined and may be improved in future releases.
 
 ### Platform-Specific Limitations
 
 - **Linux**: Device event listening requires proper udev permissions. Some distributions may need additional configuration.
-- **macOS**: The minimum deployment target is macOS 10.13 due to Xcode compatibility requirements.
+- **macOS**: The minimum deployment target is macOS 10.13 due to Xcode compatibility requirements. App Sandbox must include `com.apple.security.device.usb` entitlement for HID access.
 - **Windows**: HID device access may require administrator privileges for certain devices.
 
 ## Contributing

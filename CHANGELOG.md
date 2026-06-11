@@ -8,7 +8,23 @@ This project is a fork/modified version of [hid4flutter](https://github.com/vins
 
 ---
 
-## [0.0.9] - 2026-04-16
+## [Unreleased]
+
+### Fixed
+
+- **wchar_t encoding on macOS/Linux**: Fixed device names (manufacturer, product name, serial number) only showing the first character on non-Windows platforms. The root cause was that `wchar_t` is 4 bytes (UTF-32) on macOS/Linux/Android but was being read as UTF-16, causing the first null byte (0x0000) to be treated as a string terminator. Now correctly reads `wchar_t*` as UTF-32LE on non-Windows platforms.
+- **HidException toString()**: Added `toString()` override to `HidException` so error messages are properly displayed instead of showing `Instance of 'HidException'`.
+- **Example app - initState native call**: Fixed `setState() or markNeedsBuild() called during build` assertion errors in the example app. Calling `Hid.getDevices()` in `initState()` triggers native FFI calls that dispatch platform messages during the build phase. Both `DeviceListScreenState` and `_DeviceDetailDialogState` now defer native calls until after the first frame using `WidgetsBinding.instance.addPostFrameCallback`.
+- **macOS sandbox entitlement**: Added `com.apple.security.device.usb` entitlement to the example app's `DebugProfile.entitlements` and `Release.entitlements`. Without this, macOS App Sandbox blocks HID device access, causing `hid_get_report_descriptor` and other operations to fail.
+
+### Changed
+
+- Updated `README.md` and `README_cn.md` with macOS App Sandbox USB entitlement documentation.
+- Updated Known Issues sections in both READMEs to reflect current state.
+
+---
+
+## [0.1.0] - 2026-06-11
 
 ### Added
 
@@ -16,9 +32,9 @@ This project is a fork/modified version of [hid4flutter](https://github.com/vins
 
 ### Changed
 
-- Updated package version to `0.0.9`
-- Removed unimplemented iOS/Web platform declarations from `pubspec.yaml`
-- Updated `README.md` and `README_cn.md` platform documentation and version examples for `0.0.9`
+- Updated package version to `0.1.0`
+- Enhanced `Hid` class with platform registration logic
+- Updated `README.md` and `README_cn.md` with updated platform documentation and version examples for `0.1.0`
 
 ### Fixed
 

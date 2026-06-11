@@ -1,6 +1,6 @@
 # hid_tool
 
-[![pub](https://img.shields.io/badge/pub-0.0.9-blue)](https://pub.dev/packages/hid_tool)
+[![pub](https://img.shields.io/badge/pub-0.1.0-blue)](https://pub.dev/packages/hid_tool)
 [![license: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
 [English](README.md) | 中文
@@ -59,8 +59,8 @@
 
 ### 实现细节
 
-- 桌面平台（Windows/macOS/Linux）通过 [hidapi](https://github.com/libusb/hidapi)（版本 0.15.0）和 Dart FFI 实现。
-- Android 平台通过 MethodChannel 和 Android USB HID API 实现。
+- **桌面平台**（Windows/macOS/Linux）通过 [hidapi](https://github.com/libusb/hidapi)（版本 0.15.0）和 Dart FFI 实现。
+- **Android** 通过 MethodChannel 和 Android USB HID API 实现。
 
 ### 当前暂不支持
 
@@ -75,10 +75,10 @@
 
 ```yaml
 dependencies:
-  hid_tool: ^0.0.9
+  hid_tool: ^0.1.0
 ```
 
-将 `^0.0.9` 替换为插件的最新版本。
+将 `^0.1.0` 替换为插件的最新版本。
 
 ### 步骤 2：安装依赖
 
@@ -109,6 +109,15 @@ sudo apt-get install libhidapi-hidraw0
 #### macOS
 
 在 macOS 上，hidapi 依赖由 CocoaPods 自动管理。
+
+如果您的 macOS 应用启用了 App Sandbox（`com.apple.security.app-sandbox = true`），必须在 `DebugProfile.entitlements` 和 `Release.entitlements` 文件中添加 USB 设备访问权限：
+
+```xml
+<key>com.apple.security.device.usb</key>
+<true/>
+```
+
+否则沙盒会阻止 HID 设备访问，导致 `getReportDescriptor()` 等操作失败。
 
 #### Windows
 
@@ -497,8 +506,8 @@ await Hid.stopListening();
 
 这些功能计划在将来的版本中添加：
 
-- **iOS 支持**：添加 iOS 平台支持。
 - **Web 支持**：使用 WebHID API 添加 Web 平台支持。
+- **iOS 支持**：添加 iOS 平台支持。
 
 ## 错误处理
 
@@ -521,14 +530,14 @@ try {
 
 1. **发送报告响应处理**：使用 `sendReport()`、`sendOutputReport()` 或 `sendFeatureReport()` 时，如果发送的字节数与预期的缓冲区长度不同，当前实现未处理此情况。源代码中已用 TODO 注释标记，供未来改进。
 
-2. **输入流轮询**：`inputStream()` 方法使用 100 微秒间隔的轮询。在未来的版本中可能会进行调整以提高性能或电源效率。
+2. **输入流轮询**：`inputStream()` 方法使用 1 毫秒间隔的轮询。在未来的版本中可能会进行调整以提高性能或电源效率。
 
 3. **部分写入的错误处理**：发送报告时，如果发生部分写入（result != buffer.length），当前行为未定义，可能会在未来的版本中改进。
 
 ### 平台特定限制
 
 - **Linux**：设备事件监听需要正确的 udev 权限。某些发行版可能需要额外的配置。
-- **macOS**：最低部署目标是 macOS 10.13，这是由于 Xcode 兼容性要求。
+- **macOS**：最低部署目标是 macOS 10.13，这是由于 Xcode 兼容性要求。App Sandbox 必须包含 `com.apple.security.device.usb` 权限才能访问 HID 设备。
 - **Windows**：某些设备的 HID 设备访问可能需要管理员权限。
 
 ## 贡献

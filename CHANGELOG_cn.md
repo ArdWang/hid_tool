@@ -8,7 +8,23 @@
 
 ---
 
-## [0.0.9] - 2026-04-16
+## [Unreleased]
+
+### 修复
+
+- **macOS/Linux 上的 wchar_t 编码问题**：修复了非 Windows 平台上设备名称（制造商、产品名称、序列号）只显示首字符的问题。根本原因是 macOS/Linux/Android 上 `wchar_t` 是 4 字节（UTF-32），但代码按 UTF-16 读取，导致第一个空字节（0x0000）被当作字符串终止符。现在在非 Windows 平台上正确按 UTF-32LE 读取 `wchar_t*`。
+- **HidException toString()**：为 `HidException` 添加了 `toString()` 重写，使错误信息能正确显示，而不是只显示 `Instance of 'HidException'`。
+- **示例应用 - initState 原生调用**：修复了示例应用中的 `setState() or markNeedsBuild() called during build` 断言错误。在 `initState()` 中调用 `Hid.getDevices()` 会触发原生 FFI 调用，在构建阶段分发平台消息。`DeviceListScreenState` 和 `_DeviceDetailDialogState` 现在使用 `WidgetsBinding.instance.addPostFrameCallback` 将原生调用推迟到首帧之后。
+- **macOS 沙盒权限**：在示例应用的 `DebugProfile.entitlements` 和 `Release.entitlements` 中添加了 `com.apple.security.device.usb` 权限。否则 macOS App Sandbox 会阻止 HID 设备访问，导致 `hid_get_report_descriptor` 和其他操作失败。
+
+### 更改
+
+- 更新了 `README.md` 和 `README_cn.md`，添加了 macOS App Sandbox USB 权限的文档说明。
+- 更新了两个 README 中的已知问题部分，反映当前状态。
+
+---
+
+## [0.1.0] - 2026-06-11
 
 ### 新增
 
@@ -16,9 +32,9 @@
 
 ### 更改
 
-- 更新版本号到 `0.0.9`
-- 从 `pubspec.yaml` 中移除未实现的 iOS/Web 平台声明
-- 更新 `README.md` 与 `README_cn.md` 中的平台说明和 `0.0.9` 版本示例
+- 更新版本号到 `0.1.0`
+- 增强 `Hid` 类的平台注册逻辑
+- 更新 `README.md` 与 `README_cn.md` 中的平台说明和 `0.1.0` 版本示例
 
 ### 修复
 
