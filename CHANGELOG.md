@@ -8,10 +8,14 @@ This project is a fork/modified version of [hid4flutter](https://github.com/vins
 
 ---
 
-## [Unreleased]
+## [0.1.1] - 2026-06-16
 
 ### Fixed
 
+- **Device event listening UI freeze**: Fixed severe UI lag when USB cable is loose, causing rapid device connect/disconnect events to flood the event pipeline. Added three-layer debounce (native C++, Dart plugin, example app) with 300ms window to prevent duplicate events from overwhelming the platform thread.
+  - Windows native layer: Device notifications are now registered only after `startListening()` is called, `IsHidDevice()` tightened to match only canonical `HID#`/`HID\` paths, and `ShouldForwardEvent()` suppresses duplicate events within 300ms.
+  - Dart plugin layer: Added defensive debounce in `HidDeviceEvents` MethodCallHandler to catch any duplicates that slip through the native layer.
+  - Example app: Replaced per-event `_loadConnectedDevices()` (heavy `hid_enumerate` FFI call) with debounced `_scheduleDeviceRefresh()`.
 - **wchar_t encoding on macOS/Linux**: Fixed device names (manufacturer, product name, serial number) only showing the first character on non-Windows platforms. The root cause was that `wchar_t` is 4 bytes (UTF-32) on macOS/Linux/Android but was being read as UTF-16, causing the first null byte (0x0000) to be treated as a string terminator. Now correctly reads `wchar_t*` as UTF-32LE on non-Windows platforms.
 - **HidException toString()**: Added `toString()` override to `HidException` so error messages are properly displayed instead of showing `Instance of 'HidException'`.
 - **Example app - initState native call**: Fixed `setState() or markNeedsBuild() called during build` assertion errors in the example app. Calling `Hid.getDevices()` in `initState()` triggers native FFI calls that dispatch platform messages during the build phase. Both `DeviceListScreenState` and `_DeviceDetailDialogState` now defer native calls until after the first frame using `WidgetsBinding.instance.addPostFrameCallback`.

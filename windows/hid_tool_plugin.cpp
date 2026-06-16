@@ -52,10 +52,15 @@ bool ExtractVidPid(const std::string& device_path, int& vid, int& pid) {
     return false;
 }
 
-// Helper function to check if the device path is a HID device
+// Helper function to check if the device path is a HID device.
+// HID device paths on Windows use the format: \\?\HID#VID_XXXX&PID_XXXX#...
+// Only matching the canonical "HID#" or "HID\" prefix avoids false positives
+// from non-HID device paths that happen to contain "HID" or "VID_" as substrings.
 bool IsHidDevice(const std::string& device_path) {
-    return device_path.find("HID") != std::string::npos ||
-           device_path.find("VID_") != std::string::npos;
+    return device_path.find("HID#") != std::string::npos ||
+           device_path.find("HID\\") != std::string::npos ||
+           device_path.find("hid#") != std::string::npos ||
+           device_path.find("hid\\") != std::string::npos;
 }
 
 namespace hid_tool {
@@ -79,7 +84,10 @@ void HidToolPlugin::RegisterWithRegistrar(
 }
 
 HidToolPlugin::HidToolPlugin(flutter::PluginRegistrarWindows *registrar)
-    : registrar_(registrar), hwnd_(nullptr) {
+    : registrar_(registrar),
+      hwnd_(nullptr),
+      is_listening_(false),
+      dev_notify_(nullptr) {
   // Create a hidden window for receiving device notifications
   const std::wstring window_class_name = L"HID_DEVICE_LISTENER";
 
@@ -96,23 +104,39 @@ HidToolPlugin::HidToolPlugin(flutter::PluginRegistrarWindows *registrar)
       registrar_->messenger(), "hid_tool",
       &flutter::StandardMethodCodec::GetInstance());
 
-  // Register for HID device interface notifications
-  if (hwnd_ != nullptr) {
-    DEV_BROADCAST_DEVICEINTERFACE NotificationFilter;
-    ZeroMemory(&NotificationFilter, sizeof(NotificationFilter));
-    NotificationFilter.dbcc_size = sizeof(DEV_BROADCAST_DEVICEINTERFACE);
-    NotificationFilter.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
-    NotificationFilter.dbcc_classguid = GUID_DEVINTERFACE_HID;
-
-    RegisterDeviceNotification(hwnd_, &NotificationFilter,
-                               DEVICE_NOTIFY_WINDOW_HANDLE);
-  }
+  // Device notification registration is deferred to startListening()
 }
 
 HidToolPlugin::~HidToolPlugin() {
+  if (dev_notify_) {
+    UnregisterDeviceNotification(dev_notify_);
+    dev_notify_ = nullptr;
+  }
   if (hwnd_) {
     DestroyWindow(hwnd_);
   }
+}
+
+// Check if a device event should be forwarded to Dart.
+// Returns false if not listening or if the same device path
+// produced an event within the debounce window.
+bool HidToolPlugin::ShouldForwardEvent(const std::string& device_path) {
+    if (!is_listening_) {
+        return false;
+    }
+
+    ULONGLONG now = GetTickCount64();
+
+    auto it = last_event_times_.find(device_path);
+    if (it != last_event_times_.end()) {
+        ULONGLONG elapsed = now - it->second;
+        if (elapsed < kDebounceWindowMs) {
+            return false;
+        }
+    }
+
+    last_event_times_[device_path] = now;
+    return true;
 }
 
 // Static method for handling Windows messages
@@ -137,6 +161,12 @@ LRESULT CALLBACK HidToolPlugin::WindowProc(HWND hwnd, UINT uMsg,
 
         // Check if this is a HID device
         if (IsHidDevice(device_path)) {
+          // Debounce: suppress duplicate events for the same device
+          // within the debounce window (e.g. flapping USB cable)
+          if (!plugin->ShouldForwardEvent(device_path)) {
+            return DefWindowProc(hwnd, uMsg, wParam, lParam);
+          }
+
           int vid = 0, pid = 0;
           ExtractVidPid(device_path, vid, pid);
 
@@ -175,12 +205,33 @@ void HidToolPlugin::HandleMethodCall(
     const flutter::MethodCall<flutter::EncodableValue> &method_call,
     std::unique_ptr<flutter::MethodResult<flutter::EncodableValue>> result) {
   if (method_call.method_name().compare("startListening") == 0) {
-    // Device notification is already registered in constructor
-    // Just acknowledge the request
+    if (!is_listening_) {
+      is_listening_ = true;
+      // Clear stale debounce state on fresh start
+      last_event_times_.clear();
+
+      if (hwnd_ != nullptr && dev_notify_ == nullptr) {
+        DEV_BROADCAST_DEVICEINTERFACE NotificationFilter;
+        ZeroMemory(&NotificationFilter, sizeof(NotificationFilter));
+        NotificationFilter.dbcc_size = sizeof(DEV_BROADCAST_DEVICEINTERFACE);
+        NotificationFilter.dbcc_devicetype = DBT_DEVTYP_DEVICEINTERFACE;
+        NotificationFilter.dbcc_classguid = GUID_DEVINTERFACE_HID;
+
+        dev_notify_ = RegisterDeviceNotification(
+            hwnd_, &NotificationFilter,
+            DEVICE_NOTIFY_WINDOW_HANDLE);
+      }
+    }
     result->Success();
   } else if (method_call.method_name().compare("stopListening") == 0) {
-    // Device notification will be automatically unregistered when
-    // the window is destroyed
+    if (is_listening_) {
+      is_listening_ = false;
+      if (dev_notify_) {
+        UnregisterDeviceNotification(dev_notify_);
+        dev_notify_ = nullptr;
+      }
+      last_event_times_.clear();
+    }
     result->Success();
   } else {
     result->NotImplemented();

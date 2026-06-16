@@ -1,7 +1,8 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:hid_tool/hid_tool.dart';
-import 'dart:typed_data';
-import 'dart:async';
 
 void main() {
   runApp(const MyApp());
@@ -34,6 +35,7 @@ class DeviceListScreenState extends State<DeviceListScreen> {
   bool isListening = false;
   StreamSubscription<HidDeviceEvent>? _connectedSubscription;
   StreamSubscription<HidDeviceEvent>? _disconnectedSubscription;
+  Timer? _deviceRefreshTimer;
 
   // Check if running on web
   bool get isWeb {
@@ -58,6 +60,7 @@ class DeviceListScreenState extends State<DeviceListScreen> {
 
   @override
   void dispose() {
+    _deviceRefreshTimer?.cancel();
     _connectedSubscription?.cancel();
     _disconnectedSubscription?.cancel();
     _stopListening();
@@ -75,6 +78,19 @@ class DeviceListScreenState extends State<DeviceListScreen> {
     } catch (e) {
       _addLog('Error getting connected devices: $e');
     }
+  }
+
+  /// Debounced version of [_loadConnectedDevices].
+  /// Multiple rapid calls within the debounce window result in only one
+  /// actual [_loadConnectedDevices] invocation, preventing UI freezes
+  /// caused by repeated heavy `hid_enumerate` FFI calls.
+  void _scheduleDeviceRefresh() {
+    _deviceRefreshTimer?.cancel();
+    _deviceRefreshTimer = Timer(const Duration(milliseconds: 300), () {
+      if (mounted) {
+        _loadConnectedDevices();
+      }
+    });
   }
 
   /// Request device access (Web only)
@@ -110,11 +126,7 @@ class DeviceListScreenState extends State<DeviceListScreen> {
           _addLog('  VID: 0x${event.vendorId?.toRadixString(16) ?? "unknown"}');
           _addLog('  PID: 0x${event.productId?.toRadixString(16) ?? "unknown"}');
         });
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
-            _loadConnectedDevices();
-          }
-        });
+        _scheduleDeviceRefresh();
       });
 
       _disconnectedSubscription = HidDeviceEvents.onDisconnected.listen((event) {
@@ -122,11 +134,7 @@ class DeviceListScreenState extends State<DeviceListScreen> {
         setState(() {
           _addLog('Device Disconnected: ${event.path}');
         });
-        Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) {
-            _loadConnectedDevices();
-          }
-        });
+        _scheduleDeviceRefresh();
       });
 
       if (!mounted) return;

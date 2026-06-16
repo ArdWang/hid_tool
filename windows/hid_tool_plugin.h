@@ -4,7 +4,9 @@
 #include <flutter/method_channel.h>
 #include <flutter/plugin_registrar_windows.h>
 
+#include <map>
 #include <memory>
+#include <string>
 
 #include <windows.h>
 
@@ -31,10 +33,24 @@ class HidToolPlugin : public flutter::Plugin {
   // Window procedure for handling device notifications
   static LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
-  // Notify HIDL for HID device events
+  // Check if a device event should be forwarded (debounce + listening state check)
+  bool ShouldForwardEvent(const std::string& device_path);
+
   flutter::PluginRegistrarWindows* registrar_;
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel_;
   HWND hwnd_;
+
+  // Whether startListening has been called (controls event forwarding)
+  bool is_listening_;
+
+  // Handle for device notification registration
+  HDEVNOTIFY dev_notify_;
+
+  // Debounce: maps device path -> last event timestamp (GetTickCount64)
+  std::map<std::string, ULONGLONG> last_event_times_;
+
+  // Debounce window in milliseconds
+  static const ULONGLONG kDebounceWindowMs = 300;
 };
 
 }  // namespace hid_tool

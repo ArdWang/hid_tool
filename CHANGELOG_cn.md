@@ -8,10 +8,14 @@
 
 ---
 
-## [Unreleased]
+## [0.1.1] - 2026-06-16
 
 ### 修复
 
+- **设备事件监听 UI 卡顿**：修复了 USB 线缆松动时，大量设备连接/断开事件导致应用严重卡顿的问题。添加了三层防抖机制（原生 C++ 层、Dart 插件层、示例应用层），使用 300ms 窗口抑制重复事件，防止平台线程被淹没。
+  - Windows 原生层：设备通知现在仅在 `startListening()` 调用后才注册，`IsHidDevice()` 收紧为仅匹配规范的 `HID#`/`HID\` 路径，`ShouldForwardEvent()` 在 300ms 内抑制重复事件。
+  - Dart 插件层：在 `HidDeviceEvents` MethodCallHandler 中添加防御性防抖，捕获原生层漏掉的重复事件。
+  - 示例应用：用防抖版本的 `_scheduleDeviceRefresh()` 替代每次事件都调用的 `_loadConnectedDevices()`（重量级 `hid_enumerate` FFI 调用）。
 - **macOS/Linux 上的 wchar_t 编码问题**：修复了非 Windows 平台上设备名称（制造商、产品名称、序列号）只显示首字符的问题。根本原因是 macOS/Linux/Android 上 `wchar_t` 是 4 字节（UTF-32），但代码按 UTF-16 读取，导致第一个空字节（0x0000）被当作字符串终止符。现在在非 Windows 平台上正确按 UTF-32LE 读取 `wchar_t*`。
 - **HidException toString()**：为 `HidException` 添加了 `toString()` 重写，使错误信息能正确显示，而不是只显示 `Instance of 'HidException'`。
 - **示例应用 - initState 原生调用**：修复了示例应用中的 `setState() or markNeedsBuild() called during build` 断言错误。在 `initState()` 中调用 `Hid.getDevices()` 会触发原生 FFI 调用，在构建阶段分发平台消息。`DeviceListScreenState` 和 `_DeviceDetailDialogState` 现在使用 `WidgetsBinding.instance.addPostFrameCallback` 将原生调用推迟到首帧之后。

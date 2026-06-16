@@ -1,6 +1,6 @@
 # hid_tool
 
-[![pub](https://img.shields.io/badge/pub-0.1.0-blue)](https://pub.dev/packages/hid_tool)
+[![pub](https://img.shields.io/badge/pub-0.1.1-blue)](https://pub.dev/packages/hid_tool)
 [![license: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
 [English](README.md) | 中文
@@ -75,10 +75,10 @@
 
 ```yaml
 dependencies:
-  hid_tool: ^0.1.0
+  hid_tool: ^0.1.1
 ```
 
-将 `^0.1.0` 替换为插件的最新版本。
+将 `^0.1.1` 替换为插件的最新版本。
 
 ### 步骤 2：安装依赖
 
@@ -468,6 +468,8 @@ try {
 ## 设备连接/断开事件
 
 插件提供基于流的 API 来监听 HID 设备连接和断开事件，无需轮询。
+
+> **注意：** 设备事件具有 300ms 的防抖窗口，以防止因快速连接/断开循环（如 USB 线缆松动）导致 UI 冻结。同一设备路径在 300ms 内的重复事件将在原生层被自动抑制。
 
 ### 使用示例
 

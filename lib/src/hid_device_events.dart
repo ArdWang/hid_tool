@@ -66,6 +66,24 @@ class HidDeviceEvents {
 
   static bool _isListening = false;
 
+  /// Debounce: maps device path -> last event DateTime
+  static final Map<String, DateTime> _lastEventTimes = {};
+
+  /// Debounce window for suppressing duplicate device events
+  static const Duration _debounceWindow = Duration(milliseconds: 300);
+
+  /// Returns true if the event for [path] should be forwarded (not a duplicate
+  /// within the debounce window).
+  static bool _shouldForwardEvent(String path) {
+    final now = DateTime.now();
+    final lastTime = _lastEventTimes[path];
+    if (lastTime != null && now.difference(lastTime) < _debounceWindow) {
+      return false;
+    }
+    _lastEventTimes[path] = now;
+    return true;
+  }
+
   /// Stream of device connected events
   static Stream<HidDeviceEvent> get onConnected => _connectedController.stream;
 
@@ -85,13 +103,15 @@ class HidDeviceEvents {
       switch (call.method) {
         case 'onDeviceConnected':
           final event = _parseDeviceEvent(call.arguments);
-          if (!_connectedController.isClosed) {
+          if (!_connectedController.isClosed &&
+              _shouldForwardEvent(event.path)) {
             _connectedController.add(event);
           }
           break;
         case 'onDeviceDisconnected':
           final event = _parseDeviceEvent(call.arguments);
-          if (!_disconnectedController.isClosed) {
+          if (!_disconnectedController.isClosed &&
+              _shouldForwardEvent(event.path)) {
             _disconnectedController.add(event);
           }
           break;
@@ -125,6 +145,7 @@ class HidDeviceEvents {
           Platform.isLinux ||
           Platform.isAndroid) {
         await _channel.invokeMethod('stopListening');
+        _lastEventTimes.clear();
         _isListening = false;
       }
     } on PlatformException catch (e) {

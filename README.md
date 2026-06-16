@@ -1,6 +1,6 @@
 # hid_tool
 
-[![pub](https://img.shields.io/badge/pub-0.1.0-blue)](https://pub.dev/packages/hid_tool)
+[![pub](https://img.shields.io/badge/pub-0.1.1-blue)](https://pub.dev/packages/hid_tool)
 [![license: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
 English | [中文](README_cn.md)
@@ -75,10 +75,10 @@ Add the following line to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  hid_tool: ^0.1.0
+  hid_tool: ^0.1.1
 ```
 
-Replace `^0.1.0` with the latest version of the plugin.
+Replace `^0.1.1` with the latest version of the plugin.
 
 ### Step 2: Install Dependencies
 
@@ -468,6 +468,8 @@ try {
 ## Device Connection/Disconnection Events
 
 The plugin provides a stream-based API for listening to HID device connection and disconnection events without polling.
+
+> **Note:** Device events are debounced with a 300ms window to prevent UI freezes caused by rapid connect/disconnect cycles (e.g., loose USB cables). Duplicate events for the same device path within 300ms are automatically suppressed at the native layer.
 
 ### Example Usage
 
