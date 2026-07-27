@@ -45,13 +45,7 @@ static void send_device_event(HidToolPlugin* self, const char* method_name,
     fl_value_set_string_take(args, "productId", fl_value_new_int(product_id));
   }
 
-  g_autoptr(FlMethodCall) method_call = fl_method_call_new(
-      fl_method_channel_get_name(self->channel),
-      method_name,
-      args,
-      fl_method_channel_get_codec(self->channel));
-
-  // Invoke method on the channel
+  // Invoke method directly on the channel
   fl_method_channel_invoke_method(self->channel, method_name, args, NULL, NULL, NULL);
 }
 
