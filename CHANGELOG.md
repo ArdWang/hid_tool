@@ -8,6 +8,14 @@ This project is a fork/modified version of [hid4flutter](https://github.com/vins
 
 ---
 
+## [0.1.2] - 2026-08-06
+
+### Fixed
+
+- **Linux compilation error on Fedora 44 with Flutter 3.41.9**: Fixed compilation error `use of undeclared identifier 'fl_method_channel_get_name'` in `linux/hid_tool_plugin.cc`. The `send_device_event` function was unnecessarily constructing a `FlMethodCall` object using `fl_method_channel_get_name()` and `fl_method_channel_get_codec()`, which are not available in newer Flutter Linux embedder versions. Simplified to call `fl_method_channel_invoke_method()` directly instead. Thanks to [@ctrlVnt](https://github.com/ctrlVnt) for the fix.
+
+---
+ 
 ## [0.1.1] - 2026-06-16
 
 ### Fixed

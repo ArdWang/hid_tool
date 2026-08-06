@@ -30,4 +30,3 @@ build/
 
 # Claude Code related
 .claude/
-example/pubspec.lock

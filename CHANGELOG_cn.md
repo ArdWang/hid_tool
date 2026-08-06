@@ -8,6 +8,14 @@
 
 ---
 
+## [0.1.2] - 2026-08-06
+
+### 修复
+
+- **Fedora 44 / Flutter 3.41.9 上的 Linux 编译错误**：修复了 `linux/hid_tool_plugin.cc` 中的编译错误 `use of undeclared identifier 'fl_method_channel_get_name'`。`send_device_event` 函数原先不必要地使用 `fl_method_channel_get_name()` 和 `fl_method_channel_get_codec()` 构建 `FlMethodCall` 对象，这些 API 在较新版本的 Flutter Linux 嵌入层中已不可用。现已简化为直接调用 `fl_method_channel_invoke_method()`。感谢 [@ctrlVnt](https://github.com/ctrlVnt) 提供的修复。
+
+---
+
 ## [0.1.1] - 2026-06-16
 
 ### 修复
