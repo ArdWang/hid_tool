@@ -8,6 +8,21 @@ This project is a fork/modified version of [hid4flutter](https://github.com/vins
 
 ---
 
+## [0.1.3] - 2026-08-19
+
+### Changed
+
+- **Lowered minimum Dart SDK version from `3.5.0` to `3.2.0`**: The plugin now supports Flutter `3.16.0` and later.
+- Updated `README.md` and `README_cn.md`: version references updated to `0.1.3`, added minimum SDK requirements to the Installation section.
+
+### Removed
+
+- **Web platform support**: Removed the experimental WebHID implementation (`lib/src/web/`). The plugin no longer declares the `web` platform in `pubspec.yaml`, and the `web` and `flutter_web_plugins` dependencies have been removed.
+  - **Breaking**: Removed `Hid.requestDevice()` and `Hid.isWebHIDSupported` (Web-only APIs). Web support may be re-added in a future release (see Roadmap).
+- Removed the now-unused platform stub files (`hid_web_stub.dart`, `hid_desktop_stub.dart`, `hid_android_stub.dart`) that only existed for conditional Web builds.
+
+---
+
 ## [0.1.2] - 2026-08-06
 
 ### Fixed

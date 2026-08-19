@@ -1,6 +1,6 @@
 # hid_tool
 
-[![pub](https://img.shields.io/badge/pub-0.1.2-blue)](https://pub.dev/packages/hid_tool)
+[![pub](https://img.shields.io/badge/pub-0.1.3-blue)](https://pub.dev/packages/hid_tool)
 [![license: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
 [English](README.md) | 中文
@@ -69,16 +69,18 @@
 
 ## 安装
 
+本插件要求 Dart SDK `3.2.0` 或更高版本（Flutter `3.16.0` 或更高版本）。
+
 ### 步骤 1：添加依赖
 
 将以下行添加到您的 `pubspec.yaml` 文件中：
 
 ```yaml
 dependencies:
-  hid_tool: ^0.1.2
+  hid_tool: ^0.1.3
 ```
 
-将 `^0.1.2` 替换为插件的最新版本。
+将 `^0.1.3` 替换为插件的最新版本。
 
 ### 步骤 2：安装依赖
 

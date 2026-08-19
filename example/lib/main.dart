@@ -37,15 +37,6 @@ class DeviceListScreenState extends State<DeviceListScreen> {
   StreamSubscription<HidDeviceEvent>? _disconnectedSubscription;
   Timer? _deviceRefreshTimer;
 
-  // Check if running on web
-  bool get isWeb {
-    try {
-      return identical(0, 0.0); // Web-specific check
-    } catch (e) {
-      return false;
-    }
-  }
-
   @override
   void initState() {
     super.initState();
@@ -93,23 +84,6 @@ class DeviceListScreenState extends State<DeviceListScreen> {
     });
   }
 
-  /// Request device access (Web only)
-  Future<void> _requestDevice() async {
-    if (!isWeb) return;
-
-    try {
-      _addLog('Requesting device access...');
-      // On web, we need to request device access first
-      final webDevices = await Hid.requestDevice();
-      if (webDevices.isNotEmpty) {
-        _addLog('Granted access to ${webDevices.length} device(s)');
-        await _loadConnectedDevices();
-      }
-    } catch (e) {
-      _addLog('Error requesting device: $e');
-    }
-  }
-
   Future<void> _startListening() async {
     if (isListening) return;
 
@@ -124,12 +98,14 @@ class DeviceListScreenState extends State<DeviceListScreen> {
         setState(() {
           _addLog('Device Connected: ${event.path}');
           _addLog('  VID: 0x${event.vendorId?.toRadixString(16) ?? "unknown"}');
-          _addLog('  PID: 0x${event.productId?.toRadixString(16) ?? "unknown"}');
+          _addLog(
+              '  PID: 0x${event.productId?.toRadixString(16) ?? "unknown"}');
         });
         _scheduleDeviceRefresh();
       });
 
-      _disconnectedSubscription = HidDeviceEvents.onDisconnected.listen((event) {
+      _disconnectedSubscription =
+          HidDeviceEvents.onDisconnected.listen((event) {
         if (!mounted) return;
         setState(() {
           _addLog('Device Disconnected: ${event.path}');
@@ -189,24 +165,18 @@ class DeviceListScreenState extends State<DeviceListScreen> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('HID Tool Example'),
         actions: [
-          if (isWeb)
-            IconButton(
-              icon: const Icon(Icons.add_circle),
-              tooltip: 'Request Device Access',
-              onPressed: _requestDevice,
-            ),
-          if (!isWeb)
-            IconButton(
-              icon: Icon(isListening ? Icons.stop_circle : Icons.play_circle),
-              tooltip: isListening ? 'Stop Event Listening' : 'Start Event Listening',
-              onPressed: () {
-                if (isListening) {
-                  _stopListening();
-                } else {
-                  _startListening();
-                }
-              },
-            ),
+          IconButton(
+            icon: Icon(isListening ? Icons.stop_circle : Icons.play_circle),
+            tooltip:
+                isListening ? 'Stop Event Listening' : 'Start Event Listening',
+            onPressed: () {
+              if (isListening) {
+                _stopListening();
+              } else {
+                _startListening();
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh Devices',
@@ -217,47 +187,45 @@ class DeviceListScreenState extends State<DeviceListScreen> {
       body: Column(
         children: [
           // Event Log Section
-          if (!isWeb) ...[
-            Container(
-              height: 150,
-              width: double.infinity,
-              margin: const EdgeInsets.all(8),
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.black87,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Event Log',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: Colors.greenAccent,
-                          fontWeight: FontWeight.bold,
-                        ),
-                  ),
-                  const Divider(color: Colors.grey),
-                  Expanded(
-                    child: ListView.builder(
-                      itemCount: eventLog.length,
-                      itemBuilder: (context, index) {
-                        return Text(
-                          eventLog[index],
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontFamily: 'monospace',
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              ),
+          Container(
+            height: 150,
+            width: double.infinity,
+            margin: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.black87,
+              borderRadius: BorderRadius.circular(8),
             ),
-            const Divider(height: 1),
-          ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Event Log',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: Colors.greenAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const Divider(color: Colors.grey),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: eventLog.length,
+                    itemBuilder: (context, index) {
+                      return Text(
+                        eventLog[index],
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontFamily: 'monospace',
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
           // Device List Section
           Expanded(
             child: _buildDeviceList(),
@@ -460,13 +428,29 @@ class _DeviceDetailDialogState extends State<DeviceDetailDialog> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildInfoRow('Path', widget.device.path),
-        _buildInfoRow('Vendor ID', '0x${widget.device.vendorId.toRadixString(16)}'),
-        _buildInfoRow('Product ID', '0x${widget.device.productId.toRadixString(16)}'),
-        _buildInfoRow('Serial Number', widget.device.serialNumber.isEmpty ? 'N/A' : widget.device.serialNumber),
-        _buildInfoRow('Release Number', '0x${widget.device.releaseNumber.toRadixString(16)}'),
-        _buildInfoRow('Manufacturer', widget.device.manufacturer.isEmpty ? 'N/A' : widget.device.manufacturer),
-        _buildInfoRow('Product Name', widget.device.productName.isEmpty ? 'N/A' : widget.device.productName),
-        _buildInfoRow('Usage Page', '0x${widget.device.usagePage.toRadixString(16)}'),
+        _buildInfoRow(
+            'Vendor ID', '0x${widget.device.vendorId.toRadixString(16)}'),
+        _buildInfoRow(
+            'Product ID', '0x${widget.device.productId.toRadixString(16)}'),
+        _buildInfoRow(
+            'Serial Number',
+            widget.device.serialNumber.isEmpty
+                ? 'N/A'
+                : widget.device.serialNumber),
+        _buildInfoRow('Release Number',
+            '0x${widget.device.releaseNumber.toRadixString(16)}'),
+        _buildInfoRow(
+            'Manufacturer',
+            widget.device.manufacturer.isEmpty
+                ? 'N/A'
+                : widget.device.manufacturer),
+        _buildInfoRow(
+            'Product Name',
+            widget.device.productName.isEmpty
+                ? 'N/A'
+                : widget.device.productName),
+        _buildInfoRow(
+            'Usage Page', '0x${widget.device.usagePage.toRadixString(16)}'),
         _buildInfoRow('Usage', '0x${widget.device.usage.toRadixString(16)}'),
         _buildInfoRow('Interface Number', '${widget.device.interfaceNumber}'),
         _buildInfoRow('Bus Type', '${widget.device.busType}'),

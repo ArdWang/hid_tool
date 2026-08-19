@@ -1,6 +1,6 @@
 # hid_tool
 
-[![pub](https://img.shields.io/badge/pub-0.1.2-blue)](https://pub.dev/packages/hid_tool)
+[![pub](https://img.shields.io/badge/pub-0.1.3-blue)](https://pub.dev/packages/hid_tool)
 [![license: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
 English | [中文](README_cn.md)
@@ -69,16 +69,18 @@ Contributions are welcome! Feel free to submit issues and pull requests to help 
 
 ## Installation
 
+This plugin requires Dart SDK `3.2.0` or later (Flutter `3.16.0` or later).
+
 ### Step 1: Add Dependency
 
 Add the following line to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  hid_tool: ^0.1.2
+  hid_tool: ^0.1.3
 ```
 
-Replace `^0.1.2` with the latest version of the plugin.
+Replace `^0.1.3` with the latest version of the plugin.
 
 ### Step 2: Install Dependencies
 

@@ -8,6 +8,21 @@
 
 ---
 
+## [0.1.3] - 2026-08-19
+
+### 更改
+
+- **最低 Dart SDK 版本从 `3.5.0` 降至 `3.2.0`**：插件现在支持 Flutter `3.16.0` 及更高版本。
+- 更新了 `README.md` 和 `README_cn.md`：版本引用更新为 `0.1.3`，并在安装部分添加了最低 SDK 版本要求。
+
+### 移除
+
+- **Web 平台支持**：移除了实验性的 WebHID 实现（`lib/src/web/`）。插件不再在 `pubspec.yaml` 中声明 `web` 平台，并移除了 `web` 和 `flutter_web_plugins` 依赖。
+  - **破坏性变更**：移除了 `Hid.requestDevice()` 和 `Hid.isWebHIDSupported`（Web 专用 API）。Web 支持可能会在未来的版本中重新添加（参见后续计划）。
+- 移除了不再使用的平台 stub 文件（`hid_web_stub.dart`、`hid_desktop_stub.dart`、`hid_android_stub.dart`），它们仅用于 Web 条件编译。
+
+---
+
 ## [0.1.2] - 2026-08-06
 
 ### 修复
