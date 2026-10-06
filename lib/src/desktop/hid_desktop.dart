@@ -60,11 +60,13 @@ class _HidDesktop extends HidPlatform {
 
       if (usagePage != null && usagePage != info.usage_page) {
         // Skip device
+        current = info.next;
         continue;
       }
 
       if (usage != null && usage != info.usage) {
         // Skip device
+        current = info.next;
         continue;
       }
 
