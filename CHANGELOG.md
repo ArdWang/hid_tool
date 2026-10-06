@@ -8,6 +8,26 @@ This project is a fork/modified version of [hid4flutter](https://github.com/vins
 
 ---
 
+## [0.1.4] - 2026-10-06
+
+### Added
+
+- **macOS Swift Package Manager support**: The macOS plugin can now be consumed both by apps that still use CocoaPods and by apps that have migrated to Swift Package Manager. Previously only a podspec was shipped, so apps with CocoaPods disabled reported `The following plugins do not support Swift Package Manager for macos: - hid_tool`.
+  - Added `macos/hid_tool/Package.swift` and moved the Swift plugin class to `macos/hid_tool/Sources/hid_tool/`, the layout Swift Package Manager requires. `macos/hid_tool.podspec` now points at the new location, so the CocoaPods integration keeps working unchanged.
+  - Added `third_party/hidapi/Package.swift` to build the already vendored hidapi sources as a local Swift package, because Swift Package Manager cannot consume CocoaPods dependencies. The product is declared dynamic on purpose: the Dart side resolves the hidapi symbols from the running process via `DynamicLibrary.executable()`, so the symbols must live in a loaded image even though no native code references them.
+  - The Swift Package Manager path requires Flutter `3.41` or later, because it depends on the generated `FlutterFramework` package. CocoaPods (still the default before Flutter `3.44`) is unaffected.
+  - Thanks to [@appdev-thermoworks](https://github.com/appdev-thermoworks) for the contribution.
+
+### Fixed
+
+- **Infinite loop in `Hid.getDevices()` when filtering by `usagePage` or `usage`**: The enumeration loop in `lib/src/desktop/hid_desktop.dart` only advanced the linked-list cursor on the non-filtered path. When a device did not match `usagePage` or `usage`, the `continue` statement jumped back to the loop condition without moving on to the next item, so the same device was re-evaluated forever and the call never returned. The cursor is now advanced (`current = info.next`) before skipping. Thanks to [@sufu777](https://github.com/sufu777) for the fix.
+
+### Changed
+
+- Updated `README.md` and `README_cn.md`: version references updated to `0.1.4`, and the macOS installation notes now document both the CocoaPods and the Swift Package Manager integration.
+
+---
+
 ## [0.1.3] - 2026-08-19
 
 ### Changed

@@ -35,3 +35,6 @@ Package.resolved
 
 # Claude Code related
 .claude/
+
+# WorkBuddy agent workspace (local only, never commit)
+.workbuddy/

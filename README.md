@@ -1,6 +1,6 @@
 # hid_tool
 
-[![pub](https://img.shields.io/badge/pub-0.1.3-blue)](https://pub.dev/packages/hid_tool)
+[![pub](https://img.shields.io/badge/pub-0.1.4-blue)](https://pub.dev/packages/hid_tool)
 [![license: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
 English | [中文](README_cn.md)
@@ -77,10 +77,10 @@ Add the following line to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  hid_tool: ^0.1.3
+  hid_tool: ^0.1.4
 ```
 
-Replace `^0.1.3` with the latest version of the plugin.
+Replace `^0.1.4` with the latest version of the plugin.
 
 ### Step 2: Install Dependencies
 
@@ -110,7 +110,10 @@ sudo apt-get install libhidapi-hidraw0
 
 #### macOS
 
-On macOS, the hidapi dependency is automatically managed by CocoaPods.
+On macOS, the hidapi dependency is resolved automatically by either dependency manager:
+
+- **CocoaPods** (the default before Flutter `3.44`): everything is declared in the plugin's `macos/hid_tool.podspec`.
+- **Swift Package Manager**: if your app has migrated to Swift Package Manager, the plugin also ships `macos/hid_tool/Package.swift`, which builds the vendored hidapi sources (`third_party/hidapi`) as a local Swift package. This path requires Flutter `3.41` or later, because it depends on the generated `FlutterFramework` package.
 
 If your macOS app uses App Sandbox (`com.apple.security.app-sandbox = true`), you must add the USB device access entitlement to your `DebugProfile.entitlements` and `Release.entitlements` files:
 

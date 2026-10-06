@@ -8,6 +8,26 @@
 
 ---
 
+## [0.1.4] - 2026-10-06
+
+### 新增
+
+- **macOS 支持 Swift Package Manager**：macOS 插件现在既可用于仍在使用 CocoaPods 的应用，也可用于已迁移到 Swift Package Manager 的应用。此前只提供 podspec，因此关闭 CocoaPods 的应用会报错 `The following plugins do not support Swift Package Manager for macos: - hid_tool`。
+  - 新增 `macos/hid_tool/Package.swift`，并将 Swift 插件类移动到 `macos/hid_tool/Sources/hid_tool/`（Swift Package Manager 要求的目录结构）。`macos/hid_tool.podspec` 已指向新路径，CocoaPods 集成方式保持不变、仍可正常工作。
+  - 新增 `third_party/hidapi/Package.swift`，把仓库内置的 hidapi 源码构建为本地 Swift 包，因为 Swift Package Manager 无法消费 CocoaPods 依赖。该产物刻意声明为动态库：Dart 侧通过 `DynamicLibrary.executable()` 从当前进程解析 hidapi 符号，因此即使没有原生代码直接引用这些符号，它们也必须存在于已加载的镜像中。
+  - Swift Package Manager 路径要求 Flutter `3.41` 或更高版本，因为它依赖 Flutter 生成的 `FlutterFramework` 包。CocoaPods（在 Flutter `3.44` 之前仍是默认方式）不受影响。
+  - 感谢 [@appdev-thermoworks](https://github.com/appdev-thermoworks) 的贡献。
+
+### 修复
+
+- **使用 `usagePage` / `usage` 过滤时 `Hid.getDevices()` 死循环**：`lib/src/desktop/hid_desktop.dart` 中的枚举循环只在「未被过滤」的分支上推进了链表游标。当设备不匹配 `usagePage` 或 `usage` 时，`continue` 会直接跳回循环条件而不移动到下一项，导致同一个设备被反复判断、调用永不返回。现在在跳过之前先推进游标（`current = info.next`）。感谢 [@sufu777](https://github.com/sufu777) 提供的修复。
+
+### 更改
+
+- 更新了 `README.md` 和 `README_cn.md`：版本引用更新为 `0.1.4`，macOS 安装说明中同时记录了 CocoaPods 与 Swift Package Manager 两种集成方式。
+
+---
+
 ## [0.1.3] - 2026-08-19
 
 ### 更改

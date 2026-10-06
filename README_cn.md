@@ -1,6 +1,6 @@
 # hid_tool
 
-[![pub](https://img.shields.io/badge/pub-0.1.3-blue)](https://pub.dev/packages/hid_tool)
+[![pub](https://img.shields.io/badge/pub-0.1.4-blue)](https://pub.dev/packages/hid_tool)
 [![license: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
 [English](README.md) | 中文
@@ -77,10 +77,10 @@
 
 ```yaml
 dependencies:
-  hid_tool: ^0.1.3
+  hid_tool: ^0.1.4
 ```
 
-将 `^0.1.3` 替换为插件的最新版本。
+将 `^0.1.4` 替换为插件的最新版本。
 
 ### 步骤 2：安装依赖
 
@@ -110,7 +110,10 @@ sudo apt-get install libhidapi-hidraw0
 
 #### macOS
 
-在 macOS 上，hidapi 依赖由 CocoaPods 自动管理。
+在 macOS 上，hidapi 依赖会由以下两种依赖管理器之一自动解析：
+
+- **CocoaPods**（在 Flutter `3.44` 之前为默认方式）：相关声明位于插件的 `macos/hid_tool.podspec` 中。
+- **Swift Package Manager**：如果您的应用已迁移到 Swift Package Manager，插件同时提供 `macos/hid_tool/Package.swift`，会把仓库内置的 hidapi 源码（`third_party/hidapi`）构建为本地 Swift 包。该路径要求 Flutter `3.41` 或更高版本，因为它依赖 Flutter 生成的 `FlutterFramework` 包。
 
 如果您的 macOS 应用启用了 App Sandbox（`com.apple.security.app-sandbox = true`），必须在 `DebugProfile.entitlements` 和 `Release.entitlements` 文件中添加 USB 设备访问权限：
 
