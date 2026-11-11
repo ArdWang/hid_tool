@@ -1,6 +1,6 @@
 name: hid_tool
 description: 'A flutter plugin for communicating with HID devices (Human Interface Device)'
-version: 0.1.4
+version: 0.1.5
 homepage: https://github.com/ArdWang/hid_tool
 repository: https://github.com/ArdWang/hid_tool
 issue_tracker: https://github.com/ArdWang/hid_tool/issues
@@ -17,15 +17,15 @@ platforms:
   windows:
 
 dependencies:
-  ffi: ^2.1.0
+  ffi: ^2.2.0
   flutter:
     sdk: flutter
-  plugin_platform_interface: ^2.0.2
+  plugin_platform_interface: ^2.1.8
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^2.0.0
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
