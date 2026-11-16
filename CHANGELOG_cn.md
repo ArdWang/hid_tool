@@ -8,6 +8,23 @@
 
 ---
 
+## [0.1.5] - 2026-11-16
+
+### 修复
+
+- **macOS Swift Package Manager：hidapi 无法解析**：`macos/hid_tool/Package.swift` 通过 `../../third_party/hidapi` 指向仓库内置的 hidapi，该路径落在插件自身目录之外。现在插件目录内也建立了指向 `../../../third_party/hidapi` 的符号链接 `macos/hid_tool/third_party/hidapi`，`Package.swift` 改用 `third_party/hidapi` 引用，依赖不再越出插件目录。同一次改动中 `Package.swift` 也做了格式化（2 空格缩进、补尾逗号）。感谢 [@jonafeucht](https://github.com/jonafeucht) 提供的修复。
+
+### 更改
+
+- 提升依赖下限：
+  - `ffi`：`^2.1.0` → `^2.2.0`
+  - `plugin_platform_interface`：`^2.0.2` → `^2.1.8`
+  - `flutter_lints`（开发依赖）：`^2.0.0` → `^6.0.0`
+- 在 `analysis_options.yaml` 与 `example/analysis_options.yaml` 中新增 `analyzer.exclude`，使 `flutter analyze` 不再扫描构建产物与各原生平台目录（`build/`、`android/`、`windows/`、`macos/`、`linux/`，示例中另含 `ios/`）。
+- 更新了 `README.md` 和 `README_cn.md`：版本引用更新为 `0.1.5`。
+
+---
+
 ## [0.1.4] - 2026-10-06
 
 ### 新增

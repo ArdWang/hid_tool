@@ -8,6 +8,23 @@ This project is a fork/modified version of [hid4flutter](https://github.com/vins
 
 ---
 
+## [0.1.5] - 2026-11-16
+
+### Fixed
+
+- **macOS Swift Package Manager: hidapi could not be resolved**: `macos/hid_tool/Package.swift` pointed at the vendored hidapi through `../../third_party/hidapi`, a path outside the plugin's own directory. hidapi is now also reachable from inside the plugin through the symlink `macos/hid_tool/third_party/hidapi` → `../../../third_party/hidapi`, and `Package.swift` references it as `third_party/hidapi`, so the dependency stays within the plugin directory. `Package.swift` was reformatted (2-space indent, trailing commas) in the same change. Thanks to [@jonafeucht](https://github.com/jonafeucht) for the fix.
+
+### Changed
+
+- Raised dependency floors:
+  - `ffi`: `^2.1.0` → `^2.2.0`
+  - `plugin_platform_interface`: `^2.0.2` → `^2.1.8`
+  - `flutter_lints` (dev): `^2.0.0` → `^6.0.0`
+- Added `analyzer.exclude` entries to `analysis_options.yaml` and `example/analysis_options.yaml`, so `flutter analyze` no longer walks the generated build output and the native platform directories (`build/`, `android/`, `windows/`, `macos/`, `linux/`, plus `ios/` in the example).
+- Updated `README.md` and `README_cn.md` version references to `0.1.5`.
+
+---
+
 ## [0.1.4] - 2026-10-06
 
 ### Added

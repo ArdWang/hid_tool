@@ -1,6 +1,6 @@
 # hid_tool
 
-[![pub](https://img.shields.io/badge/pub-0.1.4-blue)](https://pub.dev/packages/hid_tool)
+[![pub](https://img.shields.io/badge/pub-0.1.5-blue)](https://pub.dev/packages/hid_tool)
 [![license: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
 [English](README.md) | 中文
@@ -77,10 +77,10 @@
 
 ```yaml
 dependencies:
-  hid_tool: ^0.1.4
+  hid_tool: ^0.1.5
 ```
 
-将 `^0.1.4` 替换为插件的最新版本。
+将 `^0.1.5` 替换为插件的最新版本。
 
 ### 步骤 2：安装依赖
 
