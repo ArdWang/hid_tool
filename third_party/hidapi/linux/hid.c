@@ -26,23 +26,27 @@
 #include <stdlib.h>
 #include <locale.h>
 #include <errno.h>
-
 /* Unix */
 #include <unistd.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
-#include <sys/utsname.h>
+#include <sys/eventfd.h>
+#include <stdint.h>
 #include <fcntl.h>
 #include <poll.h>
+#include <linux/types.h>
+#include <linux/hid.h>
+#include <stdarg.h>
+#include <wchar.h>
 
 /* Linux */
 #include <linux/hidraw.h>
-#include <linux/version.h>
 #include <linux/input.h>
 #include <libudev.h>
 
 #include "hidapi.h"
+
+struct udev_device;
 
 #ifdef HIDAPI_ALLOW_BUILD_WORKAROUND_KERNEL_2_6_39
 /* This definitions first appeared in Linux Kernel 2.6.39 in linux/hidraw.h.
@@ -77,6 +81,8 @@ struct hid_device_ {
 	wchar_t *last_error_str;
 	wchar_t *last_read_error_str;
 	struct hid_device_info* device_info;
+	int interrupt_efd;
+	int interrupted;
 };
 
 static struct hid_api_version api_version = {
@@ -100,6 +106,14 @@ static hid_device *new_hid_device(void)
 	dev->last_error_str = NULL;
 	dev->last_read_error_str = NULL;
 	dev->device_info = NULL;
+	dev->interrupted = 0;
+	dev->interrupt_efd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+	if (dev->interrupt_efd < 0) {
+		int saved_errno = errno;
+		free(dev);
+		errno = saved_errno;
+		return NULL;
+	}
 
 	return dev;
 }
@@ -282,7 +296,7 @@ static __u32 get_hid_report_bytes(const __u8 *rpt, size_t len, size_t num_bytes,
  * Skips all nested Collection, i.e. iterates until the end of current level Collection.
  *
  * The return value is non-0 when an end of current Collection is found,
- * 0 when error is occured (broken Descriptor, end of a Collection is found before its begin,
+ * 0 when error is occurred (broken Descriptor, end of a Collection is found before its begin,
  *  or no Collection is found at all).
  */
 static int hid_iterate_over_collection(const __u8 *report_descriptor, __u32 size, unsigned int *pos, int *data_len, int *key_size)
@@ -571,7 +585,8 @@ static int get_hid_report_descriptor_from_hidraw(hid_device *dev, struct hidraw_
  */
 static int parse_uevent_info(const char *uevent, unsigned *bus_type,
 	unsigned short *vendor_id, unsigned short *product_id,
-	char **serial_number_utf8, char **product_name_utf8)
+	char **serial_number_utf8, char **product_name_utf8,
+	unsigned short *version)
 {
 	char tmp[1024];
 
@@ -616,12 +631,19 @@ static int parse_uevent_info(const char *uevent, unsigned *bus_type,
 			}
 		} else if (strcmp(key, "HID_NAME") == 0) {
 			/* The caller has to free the product name */
+			free(*product_name_utf8);
 			*product_name_utf8 = strdup(value);
 			found_name = 1;
 		} else if (strcmp(key, "HID_UNIQ") == 0) {
 			/* The caller has to free the serial number */
+			free(*serial_number_utf8);
 			*serial_number_utf8 = strdup(value);
 			found_serial = 1;
+		} else if (strcmp(key, "HID_FIRMWARE_VERSION") == 0) {
+			/* Available since Linux 7.1 when supplied by the kernel driver:
+			 * https://git.kernel.org/torvalds/c/6ca9029c823b7853e980585e757343e0e84227cd
+			 */
+			*version = (unsigned short)strtol(value, NULL, 16);
 		}
 
 next_line:
@@ -648,6 +670,7 @@ static struct hid_device_info * create_device_info_for_device(struct udev_device
 	char *serial_number_utf8 = NULL;
 	char *product_name_utf8 = NULL;
 	unsigned bus_type;
+	unsigned short hid_version = 0;
 	int result;
 	struct hidraw_report_descriptor report_desc;
 
@@ -670,7 +693,8 @@ static struct hid_device_info * create_device_info_for_device(struct udev_device
 		&dev_vid,
 		&dev_pid,
 		&serial_number_utf8,
-		&product_name_utf8);
+		&product_name_utf8,
+		&hid_version);
 
 	if (!result) {
 		/* parse_uevent_info() failed for at least one field. */
@@ -683,6 +707,7 @@ static struct hid_device_info * create_device_info_for_device(struct udev_device
 		case BUS_I2C:
 		case BUS_USB:
 		case BUS_SPI:
+		case BUS_VIRTUAL:
 			break;
 
 		default:
@@ -708,7 +733,7 @@ static struct hid_device_info * create_device_info_for_device(struct udev_device
 	cur_dev->serial_number = utf8_to_wchar_t(serial_number_utf8);
 
 	/* Release Number */
-	cur_dev->release_number = 0x0;
+	cur_dev->release_number = hid_version;
 
 	/* Interface Number */
 	cur_dev->interface_number = -1;
@@ -776,6 +801,14 @@ static struct hid_device_info * create_device_info_for_device(struct udev_device
 			cur_dev->product_string = utf8_to_wchar_t(product_name_utf8);
 
 			cur_dev->bus_type = HID_API_BUS_SPI;
+
+			break;
+
+		case BUS_VIRTUAL:
+			cur_dev->manufacturer_string = wcsdup(L"");
+			cur_dev->product_string = utf8_to_wchar_t(product_name_utf8);
+
+			cur_dev->bus_type = HID_API_BUS_VIRTUAL;
 
 			break;
 
@@ -1072,8 +1105,7 @@ hid_device * HID_API_EXPORT hid_open_path(const char *path)
 
 	dev = new_hid_device();
 	if (!dev) {
-		errno = ENOMEM;
-		register_global_error("Couldn't allocate memory");
+		register_global_error_format("Failed to create hid_device: %s", strerror(errno));
 		return NULL;
 	}
 
@@ -1094,8 +1126,8 @@ hid_device * HID_API_EXPORT hid_open_path(const char *path)
 	}
 	else {
 		/* Unable to open a device. */
-		free(dev);
 		register_global_error_format("Failed to open a device with path '%s': %s", path, strerror(errno));
+		hid_close(dev);
 		return NULL;
 	}
 }
@@ -1132,22 +1164,29 @@ int HID_API_EXPORT hid_read_timeout(hid_device *dev, unsigned char *data, size_t
 
 	int bytes_read;
 
-	if (milliseconds >= 0) {
-		/* Milliseconds is either 0 (non-blocking) or > 0 (contains
-		   a valid timeout). In both cases we want to call poll()
-		   and wait for data to arrive.  Don't rely on non-blocking
-		   operation (O_NONBLOCK) since some kernels don't seem to
-		   properly report device disconnection through read() when
-		   in non-blocking mode.  */
+	{
+		/* Always poll() - even for a blocking read (milliseconds < 0) -
+		   so that hid_read_interrupt() can wake a read that is waiting for
+		   data via the interrupt eventfd. A negative timeout makes poll()
+		   block indefinitely, matching blocking-read semantics.
+		   The eventfd stays readable until hid_read_clear_interrupt(), and
+		   it is checked before reading device data, so an interrupted read
+		   fails even when input is queued.
+		   Don't rely on non-blocking operation (O_NONBLOCK) since some
+		   kernels don't seem to properly report device disconnection
+		   through read() when in non-blocking mode.  */
 		int ret;
-		struct pollfd fds;
+		struct pollfd fds[2];
 
-		fds.fd = dev->device_handle;
-		fds.events = POLLIN;
-		fds.revents = 0;
-		ret = poll(&fds, 1, milliseconds);
+		fds[0].fd = dev->device_handle;
+		fds[0].events = POLLIN;
+		fds[0].revents = 0;
+		fds[1].fd = dev->interrupt_efd;
+		fds[1].events = POLLIN;
+		fds[1].revents = 0;
+		ret = poll(fds, 2, milliseconds);
 		if (ret == 0) {
-			/* Timeout */
+			/* Timeout (only reachable when milliseconds >= 0) */
 			return ret;
 		}
 		if (ret == -1) {
@@ -1155,15 +1194,24 @@ int HID_API_EXPORT hid_read_timeout(hid_device *dev, unsigned char *data, size_t
 			register_error_str(&dev->last_read_error_str, strerror(errno));
 			return ret;
 		}
-		else {
-			/* Check for errors on the file descriptor. This will
-			   indicate a device disconnection. */
-			if (fds.revents & (POLLERR | POLLHUP | POLLNVAL)) {
-				// We cannot use strerror() here as no -1 was returned from poll().
-				errno = EIO;
-				register_error_str(&dev->last_read_error_str, "hid_read_timeout: unexpected poll error (device disconnected)");
-				return -1;
-			}
+
+		/* Device disconnection takes priority over the interrupt. */
+		if (fds[0].revents & (POLLERR | POLLHUP | POLLNVAL)) {
+			// We cannot use strerror() here as no -1 was returned from poll().
+			errno = EIO;
+			register_error_str(&dev->last_read_error_str, "hid_read_timeout: unexpected poll error (device disconnected)");
+			return -1;
+		}
+
+		if (fds[1].revents & POLLIN) {
+			register_error_str(&dev->last_read_error_str, "hid_read_timeout: operation interrupted");
+			return -1;
+		}
+
+		if (!(fds[0].revents & POLLIN)) {
+			/* Neither fd is readable yet still poll() returned > 0;
+			   treat as no data available. */
+			return 0;
 		}
 	}
 
@@ -1190,6 +1238,17 @@ HID_API_EXPORT const wchar_t * HID_API_CALL  hid_read_error(hid_device *dev)
 	return dev->last_read_error_str;
 }
 
+
+int HID_API_EXPORT hid_set_num_input_buffers(hid_device *dev, int num_buffers)
+{
+	if (num_buffers <= 0 || num_buffers > HID_API_MAX_NUM_INPUT_BUFFERS) {
+		register_device_error(dev, "num_buffers out of range");
+		return -1;
+	}
+	register_device_error(dev, NULL);
+	return 0;
+}
+
 int HID_API_EXPORT hid_set_nonblocking(hid_device *dev, int nonblock)
 {
 	/* Do all non-blocking in userspace using poll(), since it looks
@@ -1198,6 +1257,33 @@ int HID_API_EXPORT hid_set_nonblocking(hid_device *dev, int nonblock)
 
 	dev->blocking = !nonblock;
 	return 0; /* Success */
+}
+
+void HID_API_EXPORT hid_read_interrupt(hid_device *dev)
+{
+	__atomic_store_n(&dev->interrupted, 1, __ATOMIC_RELEASE);
+	uint64_t one = 1;
+	ssize_t written;
+	do {
+		written = write(dev->interrupt_efd, &one, sizeof(one));
+	} while (written < 0 && errno == EINTR);
+	/* EAGAIN means the eventfd is already signalled. */
+}
+
+int HID_API_EXPORT hid_is_read_interrupted(hid_device *dev)
+{
+	return __atomic_load_n(&dev->interrupted, __ATOMIC_ACQUIRE);
+}
+
+void HID_API_EXPORT hid_read_clear_interrupt(hid_device *dev)
+{
+	uint64_t v;
+	ssize_t got;
+	do {
+		got = read(dev->interrupt_efd, &v, sizeof(v));
+	} while (got < 0 && errno == EINTR);
+	/* Publish the cleared state only after the eventfd is drained. */
+	__atomic_store_n(&dev->interrupted, 0, __ATOMIC_RELEASE);
 }
 
 
@@ -1282,7 +1368,10 @@ void HID_API_EXPORT hid_close(hid_device *dev)
 	if (!dev)
 		return;
 
-	close(dev->device_handle);
+	if (dev->device_handle >= 0)
+		close(dev->device_handle);
+	if (dev->interrupt_efd >= 0)
+		close(dev->interrupt_efd);
 
 	free(dev->last_error_str);
 	free(dev->last_read_error_str);

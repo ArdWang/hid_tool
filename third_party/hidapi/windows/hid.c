@@ -20,14 +20,14 @@
         https://github.com/libusb/hidapi .
 ********************************************************/
 
-#if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
-/* Do not warn about wcsncpy usage.
-   https://docs.microsoft.com/cpp/c-runtime-library/security-features-in-the-crt */
-#define _CRT_SECURE_NO_WARNINGS
-#endif
-
 #ifdef __cplusplus
 extern "C" {
+#endif
+
+#ifdef WIN32_LEAN_AND_MEAN
+/* It may be set by IDE/project and apparently HIDAPI relies
+ * on certain Windows headers being included by default. */
+#undef WIN32_LEAN_AND_MEAN
 #endif
 
 #include "hidapi_winapi.h"
@@ -59,6 +59,16 @@ typedef LONG NTSTATUS;
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+/* MSVC secure CRT (VS2005+) provides swprintf_s/wcsncpy_s.
+   Older MSVC and GCC/MinGW/Cygwin use the classic variants. */
+#if defined(_MSC_VER) && (_MSC_VER >= 1400)
+#define HIDAPI_SWPRINTF swprintf_s
+#define HIDAPI_WCSNCPY(dest, dest_count, src) wcsncpy_s((dest), (dest_count), (src), _TRUNCATE)
+#else
+#define HIDAPI_SWPRINTF swprintf
+#define HIDAPI_WCSNCPY(dest, dest_count, src) wcsncpy((dest), (src), (dest_count))
+#endif
 
 #ifdef MIN
 #undef MIN
@@ -138,11 +148,13 @@ static int lookup_functions()
 		goto err;
 	}
 
-#if defined(__GNUC__)
-# pragma GCC diagnostic push
-# pragma GCC diagnostic ignored "-Wcast-function-type"
-#endif
-#define RESOLVE(lib_handle, x) x = (x##_)GetProcAddress(lib_handle, #x); if (!x) goto err;
+/* Avoid direct function-pointer cast from FARPROC to typed callback pointer.
+   Using memcpy keeps this warning-free regardless of the compiler and compiler settings. */
+#define RESOLVE(lib_handle, x) do { \
+	FARPROC proc_addr = GetProcAddress(lib_handle, #x); \
+	if (!proc_addr) goto err; \
+	memcpy(&x, &proc_addr, sizeof(x)); \
+} while (0)
 
 	RESOLVE(hid_lib_handle, HidD_GetHidGuid);
 	RESOLVE(hid_lib_handle, HidD_GetAttributes);
@@ -167,9 +179,6 @@ static int lookup_functions()
 	RESOLVE(cfgmgr32_lib_handle, CM_Get_Device_Interface_ListW);
 
 #undef RESOLVE
-#if defined(__GNUC__)
-# pragma GCC diagnostic pop
-#endif
 
 	return 0;
 
@@ -194,9 +203,13 @@ struct hid_device_ {
 		char *read_buf;
 		OVERLAPPED ol;
 		OVERLAPPED write_ol;
+		HANDLE interrupt_event;
+		volatile LONG interrupted;
 		struct hid_device_info* device_info;
 		DWORD write_timeout_ms;
 };
+
+static void free_hid_device(hid_device *dev);
 
 static hid_device *new_hid_device()
 {
@@ -221,6 +234,15 @@ static hid_device *new_hid_device()
 	dev->ol.hEvent = CreateEvent(NULL, FALSE, FALSE /*initial state f=nonsignaled*/, NULL);
 	memset(&dev->write_ol, 0, sizeof(dev->write_ol));
 	dev->write_ol.hEvent = CreateEvent(NULL, FALSE, FALSE /*initial state f=nonsignaled*/, NULL);
+	dev->interrupt_event = CreateEvent(NULL, TRUE /*manual reset*/, FALSE /*initial state nonsignaled*/, NULL);
+	if (dev->interrupt_event == NULL) {
+		/* A NULL handle would make WaitForMultipleObjects() in
+		   hid_read_timeout() fail instantly (busy-spinning a blocking read)
+		   instead of blocking, so fail the open instead. */
+		free_hid_device(dev);
+		return NULL;
+	}
+	dev->interrupted = 0;
 	dev->device_info = NULL;
 	dev->write_timeout_ms = 1000;
 
@@ -231,6 +253,7 @@ static void free_hid_device(hid_device *dev)
 {
 	CloseHandle(dev->ol.hEvent);
 	CloseHandle(dev->write_ol.hEvent);
+	CloseHandle(dev->interrupt_event);
 	CloseHandle(dev->device_handle);
 	free(dev->last_error_str);
 	free(dev->last_read_error_str);
@@ -281,7 +304,8 @@ static void register_winapi_error_to_buffer(wchar_t **error_buffer, const WCHAR 
 	if (!msg)
 		return;
 
-	int printf_written = swprintf(msg, msg_len + 1, L"%.*ls: (0x%08X) %.*ls", (int)op_len, op, error_code, (int)system_err_len, system_err_buf);
+	int printf_written = HIDAPI_SWPRINTF(msg, msg_len + 1, L"%.*ls: (0x%08X) %.*ls", (int)op_len, op, error_code, (int)system_err_len, system_err_buf);
+	msg[msg_len] = L'\0';
 
 	if (printf_written < 0)
 	{
@@ -804,6 +828,7 @@ static struct hid_device_info *hid_internal_get_device_info(const wchar_t *path,
 	case HID_API_BUS_UNKNOWN:
 	case HID_API_BUS_SPI:
 	case HID_API_BUS_I2C:
+	case HID_API_BUS_VIRTUAL:
 		/* shut down -Wswitch */
 		break;
 	}
@@ -1162,6 +1187,14 @@ int HID_API_EXPORT HID_API_CALL hid_read_timeout(hid_device *dev, unsigned char 
 
 	register_string_error_to_buffer(&dev->last_read_error_str, NULL);
 
+	/* ReadFile() may complete synchronously, and WaitForMultipleObjects()
+	   reports a completed read before the interrupt event, so check the
+	   sticky state before consuming any input. */
+	if (InterlockedCompareExchange(&dev->interrupted, 0, 0)) {
+		register_string_error_to_buffer(&dev->last_read_error_str, L"hid_read_timeout: operation interrupted");
+		return -1;
+	}
+
 	/* Copy the handle for convenience. */
 	HANDLE ev = dev->ol.hEvent;
 
@@ -1189,9 +1222,16 @@ int HID_API_EXPORT HID_API_CALL hid_read_timeout(hid_device *dev, unsigned char 
 	}
 
 	if (overlapped) {
-		/* See if there is any data yet. */
-		res = WaitForSingleObject(ev, milliseconds >= 0 ? (DWORD)milliseconds : INFINITE);
-		if (res != WAIT_OBJECT_0) {
+		HANDLE waits[2] = { ev, dev->interrupt_event };
+		DWORD wr = WaitForMultipleObjects(2, waits, FALSE, milliseconds >= 0 ? (DWORD)milliseconds : INFINITE);
+		if (wr == WAIT_OBJECT_0 + 1) {
+			/* Leave ReadFile in flight. After a clear, the next read waits
+			   for it or retrieves its completed result. hid_close() cancels
+			   and waits for any request still pending. */
+			register_string_error_to_buffer(&dev->last_read_error_str, L"hid_read_timeout: operation interrupted");
+			return -1;
+		}
+		if (wr != WAIT_OBJECT_0) {
 			/* There was no data this time. Return zero bytes available,
 			   but leave the Overlapped I/O running. */
 			return 0;
@@ -1244,6 +1284,40 @@ HID_API_EXPORT const wchar_t * HID_API_CALL hid_read_error(hid_device *dev)
 	if (dev->last_read_error_str == NULL)
 		return L"Success";
 	return dev->last_read_error_str;
+}
+
+
+int HID_API_EXPORT HID_API_CALL hid_set_num_input_buffers(hid_device *dev, int num_buffers)
+{
+	if (num_buffers <= 0 || num_buffers > HID_API_MAX_NUM_INPUT_BUFFERS) {
+		register_string_error(dev, L"num_buffers out of range");
+		return -1;
+	}
+	if (!HidD_SetNumInputBuffers(dev->device_handle, (ULONG)num_buffers)) {
+		register_winapi_error(dev, L"HidD_SetNumInputBuffers");
+		return -1;
+	}
+	register_string_error(dev, NULL);
+	return 0;
+}
+
+void HID_API_EXPORT HID_API_CALL hid_read_interrupt(hid_device *dev)
+{
+	InterlockedExchange(&dev->interrupted, 1);
+	SetEvent(dev->interrupt_event);
+}
+
+int HID_API_EXPORT HID_API_CALL hid_is_read_interrupted(hid_device *dev)
+{
+	/* Use the same atomic access as the read path. */
+	return InterlockedCompareExchange(&dev->interrupted, 0, 0) ? 1 : 0;
+}
+
+void HID_API_EXPORT HID_API_CALL hid_read_clear_interrupt(hid_device *dev)
+{
+	/* Publish the cleared state only after the event is reset. */
+	ResetEvent(dev->interrupt_event);
+	InterlockedExchange(&dev->interrupted, 0);
 }
 
 int HID_API_EXPORT HID_API_CALL hid_set_nonblocking(hid_device *dev, int nonblock)
@@ -1410,6 +1484,13 @@ void HID_API_EXPORT HID_API_CALL hid_close(hid_device *dev)
 	if (!dev)
 		return;
 
+	if (dev->read_pending) {
+		DWORD bytes_read;
+		/* A timed-out or interrupted read may belong to another thread.
+		   Keep its buffer, OVERLAPPED and event alive until it completes. */
+		CancelIoEx(dev->device_handle, &dev->ol);
+		GetOverlappedResult(dev->device_handle, &dev->ol, &bytes_read, TRUE);
+	}
 	CancelIo(dev->device_handle);
 	free_hid_device(dev);
 }
@@ -1426,7 +1507,7 @@ int HID_API_EXPORT_CALL HID_API_CALL hid_get_manufacturer_string(hid_device *dev
 		return -1;
 	}
 
-	wcsncpy(string, dev->device_info->manufacturer_string, maxlen);
+	HIDAPI_WCSNCPY(string, maxlen, dev->device_info->manufacturer_string);
 	string[maxlen - 1] = L'\0';
 
 	register_string_error(dev, NULL);
@@ -1446,7 +1527,7 @@ int HID_API_EXPORT_CALL HID_API_CALL hid_get_product_string(hid_device *dev, wch
 		return -1;
 	}
 
-	wcsncpy(string, dev->device_info->product_string, maxlen);
+	HIDAPI_WCSNCPY(string, maxlen, dev->device_info->product_string);
 	string[maxlen - 1] = L'\0';
 
 	register_string_error(dev, NULL);
@@ -1466,7 +1547,7 @@ int HID_API_EXPORT_CALL HID_API_CALL hid_get_serial_number_string(hid_device *de
 		return -1;
 	}
 
-	wcsncpy(string, dev->device_info->serial_number, maxlen);
+	HIDAPI_WCSNCPY(string, maxlen, dev->device_info->serial_number);
 	string[maxlen - 1] = L'\0';
 
 	register_string_error(dev, NULL);
@@ -1596,7 +1677,9 @@ HID_API_EXPORT const wchar_t * HID_API_CALL  hid_error(hid_device *dev)
 	return last_global_error_str;
 }
 
-#ifndef hidapi_winapi_EXPORTS
+#ifndef HIDAPI_CMAKE_V0_BUILD
+/* Include the descriptor reconstruction code when NOT building with CMake.
+   CMake builds compile hidapi_descriptor_reconstruct.c as a separate translation unit. */
 #include "hidapi_descriptor_reconstruct.c"
 #endif
 

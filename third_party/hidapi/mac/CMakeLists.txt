@@ -1,11 +1,13 @@
-cmake_minimum_required(VERSION 3.4.3...3.25 FATAL_ERROR)
-
 list(APPEND HIDAPI_PUBLIC_HEADERS "hidapi_darwin.h")
 
 add_library(hidapi_darwin
     ${HIDAPI_PUBLIC_HEADERS}
     hid.c
 )
+hidapi_configure_sanitizers(hidapi_darwin)
+if(HIDAPI_BUILD_AS_CXX)
+    set_source_files_properties(hid.c PROPERTIES LANGUAGE CXX)
+endif()
 
 find_package(Threads REQUIRED)
 
@@ -61,4 +63,8 @@ if(HIDAPI_INSTALL_TARGETS)
     )
 endif()
 
-hidapi_configure_pc("${PROJECT_ROOT}/pc/hidapi.pc.in")
+hidapi_configure_pc("${PROJECT_ROOT}/pc/hidapi-backend-specific.pc.in"
+    OUTPUT_NAME "hidapi-darwin"
+    LIBRARY_NAME "hidapi"
+    DESCRIPTION "C Library for USB/Bluetooth HID device access from Linux, Mac OS X, FreeBSD, and Windows. This is the Darwin implementation."
+)

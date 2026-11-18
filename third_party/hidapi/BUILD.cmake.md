@@ -88,16 +88,26 @@ Some of the [standard](https://cmake.org/cmake/help/latest/manual/cmake-variable
 HIDAPI-specific CMake variables:
 
 - `HIDAPI_BUILD_HIDTEST` - when set to TRUE, build a small test application `hidtest`;
-- `HIDAPI_WITH_TESTS` - when set to TRUE, build all (unit-)tests;
-currently this option is only available on Windows, since only Windows backend has tests;
+- `HIDAPI_WITH_TESTS` - when set to TRUE, build the tests available for the selected backends.
+Defaults to FALSE on Linux and macOS. On Windows, and on other platforms when libusb is enabled,
+defaults to TRUE for Debug builds and FALSE otherwise. Virtual-device tests require
+CMake 3.16 or newer and skip when their device provider is unavailable.
+See [HIDAPI tests](src/tests/README.md) for coverage and setup requirements.
 
 <details>
-  <summary>Linux-specific variables</summary>
+  <summary>Linux and FreeBSD-specific variables</summary>
 
   - `HIDAPI_WITH_HIDRAW` - when set to TRUE, build HIDRAW-based implementation of HIDAPI (`hidapi-hidraw`), otherwise don't build it; defaults to TRUE;
   - `HIDAPI_WITH_LIBUSB` - when set to TRUE, build LIBUSB-based implementation of HIDAPI (`hidapi-libusb`), otherwise don't build it; defaults to TRUE;
 
   **NOTE**: at least one of `HIDAPI_WITH_HIDRAW` or `HIDAPI_WITH_LIBUSB` has to be set to TRUE.
+
+</details><br>
+
+<details>
+  <summary>Testing-only variables</summary>
+
+  - `HIDAPI_BUILD_AS_CXX` - when set to TRUE, the HIDAPI C source files are compiled with a C++ compiler instead of a C compiler. Useful to confirm that HIDAPI's sources stay compatible with consumers that include them into a C++ translation unit. Not intended for production builds; defaults to FALSE.
 
 </details><br>
 
@@ -141,11 +151,12 @@ Available CMake targets after successful `find_package(hidapi)`:
 - `hidapi::include` - if you need only to include `<hidapi.h>` but not link against the library;
 - `hidapi::winapi` - same as `hidapi::hidapi` on Windows; available only on Windows;
 - `hidapi::darwin` - same as `hidapi::hidapi` on macOS; available only on macOS;
+- `hidapi::netbsd` - available when the native NetBSD uhid backend is built;
 - `hidapi::libusb` - available when libusb backend is used/available;
-- `hidapi::hidraw` - available when hidraw backend is used/available on Linux;
+- `hidapi::hidraw` - available when hidraw backend is used/available on Linux or FreeBSD;
 
-**NOTE**: on Linux often both `hidapi::libusb` and `hidapi::hidraw` backends are available; in that case `hidapi::hidapi` is an alias for **`hidapi::hidraw`**. The motivation is that `hidraw` backend is a native Linux kernel implementation of HID protocol, and supports various HID devices (USB, Bluetooth, I2C, etc.). If `hidraw` backend isn't built at all (`hidapi::libusb` is the only target) - `hidapi::hidapi` is an alias for `hidapi::libusb`.
-If you're developing a cross-platform application and you are sure you need to use `libusb` backend on Linux, the simple way to achieve this is:
+**NOTE**: on Linux and FreeBSD often both `hidapi::libusb` and `hidapi::hidraw` backends are available; in that case `hidapi::hidapi` is an alias for **`hidapi::hidraw`**. The motivation is that `hidraw` is the native kernel HID implementation and supports various HID devices (USB, Bluetooth, I2C, etc.). If `hidraw` backend isn't built at all (`hidapi::libusb` is the only target) - `hidapi::hidapi` is an alias for `hidapi::libusb`.
+If you're developing a cross-platform application and you are sure you need to use `libusb` backend on Linux or FreeBSD, the simple way to achieve this is:
 ```cmake
 if(TARGET hidapi::libusb)
     target_link_libraries(my_project PRIVATE hidapi::libusb)
@@ -176,7 +187,7 @@ Lets call this "larger project" a "host project".
 
 All of the variables described in [standalone build](#standalone-package-build) section can be used to control HIDAPI build in case of a subdirectory, e.g.:
 ```cmake
-set(HIDAPI_WITH_LIBUSB FALSE) # surely will be used only on Linux
+set(HIDAPI_WITH_LIBUSB FALSE) # used only on Linux and FreeBSD
 set(BUILD_SHARED_LIBS FALSE) # HIDAPI as static library on all platforms
 add_subdirectory(hidapi)
 ```
@@ -217,6 +228,7 @@ Available CMake targets after `add_subdirectory(hidapi)` _are the same as in cas
 - `hidapi_include` - the interface library; `hidapi::include` is an alias of it;
 - `hidapi_winapi` - library target on Windows; `hidapi::winapi` is an alias of it;
 - `hidapi_darwin` - library target on macOS; `hidapi::darwin` is an alias of it;
+- `hidapi_netbsd` - library target for the NetBSD uhid backend; `hidapi::netbsd` is an alias of it;
 - `hidapi_libusb` - library target for libusb backend; `hidapi::libusb` is an alias of it;
 - `hidapi_hidraw` - library target for hidraw backend; `hidapi::hidraw` is an alias of it;
 - `hidapi-libusb` - an alias of `hidapi_libusb` for compatibility with raw library name;

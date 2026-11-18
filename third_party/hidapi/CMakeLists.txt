@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1.3...3.25 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.6.3...4.3 FATAL_ERROR)
 
 if(NOT CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     add_subdirectory(src)
@@ -38,7 +38,11 @@ if(APPLE)
         option(CMAKE_FRAMEWORK "Build macOS/iOS Framework version of the library" OFF)
     endif()
 elseif(NOT WIN32)
+    option(HIDAPI_WITH_LIBUSB "Build LIBUSB-based implementation of HIDAPI" ON)
     if(CMAKE_SYSTEM_NAME MATCHES "Linux")
+        option(HIDAPI_WITH_HIDRAW "Build HIDRAW-based implementation of HIDAPI" ON)
+    endif()
+    if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
         option(HIDAPI_WITH_HIDRAW "Build HIDRAW-based implementation of HIDAPI" ON)
         option(HIDAPI_WITH_LIBUSB "Build LIBUSB-based implementation of HIDAPI" ON)
     endif()
@@ -59,22 +63,17 @@ endif()
 
 option(HIDAPI_ENABLE_ASAN "Build HIDAPI with ASAN address sanitizer instrumentation" OFF)
 
-if(HIDAPI_ENABLE_ASAN)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address")
-    if(MSVC)
-        # the default is to have "/INCREMENTAL" which causes a warning when "-fsanitize=address" is present
-        set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /INCREMENTAL:NO")
-        set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} /INCREMENTAL:NO")
-        set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO} /INCREMENTAL:NO")
-        set(CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO "${CMAKE_SHARED_LINKER_FLAGS_RELWITHDEBINFO} /INCREMENTAL:NO")
-    endif()
-endif()
-
 if(WIN32)
-    # so far only Windows has tests
+    option(HIDAPI_WITH_TESTS "Build HIDAPI (unit-)tests" ${IS_DEBUG_BUILD})
+elseif(CMAKE_SYSTEM_NAME MATCHES "Linux" OR APPLE)
+    # Linux and macOS include virtual-device based tests (uhid / raw-gadget /
+    # IOHIDUserDevice). Keep the full test suite opt-in because those tests need
+    # a virtual device at runtime and otherwise self-skip.
+    option(HIDAPI_WITH_TESTS "Build HIDAPI (unit-)tests" OFF)
+elseif(HIDAPI_WITH_LIBUSB)
     option(HIDAPI_WITH_TESTS "Build HIDAPI (unit-)tests" ${IS_DEBUG_BUILD})
 else()
-    set(HIDAPI_WITH_TESTS OFF)
+    option(HIDAPI_WITH_TESTS "Build HIDAPI (unit-)tests" OFF)
 endif()
 
 if(HIDAPI_WITH_TESTS)
@@ -92,17 +91,6 @@ if(HIDAPI_BUILD_HIDTEST)
     add_subdirectory(hidtest)
 endif()
 
-if(HIDAPI_ENABLE_ASAN)
-    if(NOT MSVC)
-        # MSVC doesn't recognize those options, other compilers - requiring it
-        foreach(HIDAPI_TARGET hidapi_winapi hidapi_darwin hidapi_hidraw hidapi_libusb hidtest_hidraw hidtest_libusb hidtest)
-            if(TARGET ${HIDAPI_TARGET})
-                if(BUILD_SHARED_LIBS)
-                    target_link_options(${HIDAPI_TARGET} PRIVATE -fsanitize=address)
-                else()
-                    target_link_options(${HIDAPI_TARGET} PUBLIC -fsanitize=address)
-                endif()
-            endif()
-        endforeach()
-    endif()
+if(HIDAPI_WITH_TESTS)
+    add_subdirectory(src/tests)
 endif()
