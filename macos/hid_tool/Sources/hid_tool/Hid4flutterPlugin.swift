@@ -47,7 +47,13 @@ public class HidToolPlugin: NSObject, FlutterPlugin {
       return
     }
 
-    notificationPort = IONotificationPortCreate(kIOMainPortDefault)
+    let mainPort: mach_port_t
+    if #available(macOS 12.0, *) {
+      mainPort = kIOMainPortDefault
+    } else {
+      mainPort = kIOMasterPortDefault
+    }
+    notificationPort = IONotificationPortCreate(mainPort)
 
     guard let notificationPort = notificationPort else {
       print("Error: IONotificationPortCreate returned NULL.")
