@@ -8,7 +8,7 @@
 PRODUCT_NAME = hid_tool_example
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.github.vinsfortunato.hid_toolExample
+PRODUCT_BUNDLE_IDENTIFIER = com.github.vinsfortunato.hidToolExample
 
 // The copyright displayed in application information
-PRODUCT_COPYRIGHT = Copyright © 2023 com.github.vinsfortunato. All rights reserved.
+PRODUCT_COPYRIGHT = Copyright © 2026 com.github.vinsfortunato. All rights reserved.

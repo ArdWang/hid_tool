@@ -8,10 +8,10 @@ libhidapi_libusb_la_LIBADD = $(LIBS_LIBUSB)
 endif
 
 if OS_FREEBSD
-lib_LTLIBRARIES = libhidapi.la
-libhidapi_la_SOURCES = hid.c
-libhidapi_la_LDFLAGS = $(LTLDFLAGS)
-libhidapi_la_LIBADD = $(LIBS_LIBUSB)
+lib_LTLIBRARIES = libhidapi-libusb.la
+libhidapi_libusb_la_SOURCES = hid.c
+libhidapi_libusb_la_LDFLAGS = $(LTLDFLAGS)
+libhidapi_libusb_la_LIBADD = $(LIBS_LIBUSB)
 endif
 
 if OS_KFREEBSD
@@ -31,4 +31,4 @@ endif
 hdrdir = $(includedir)/hidapi
 hdr_HEADERS = $(top_srcdir)/hidapi/hidapi.h hidapi_libusb.h
 
-EXTRA_DIST = Makefile-manual
+EXTRA_DIST = Makefile-manual hidapi_libusb_report_descriptor.h hidapi_thread_pthread.h

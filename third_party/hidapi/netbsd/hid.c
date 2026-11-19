@@ -30,6 +30,10 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <iconv.h>
+#ifndef ICONV_CONST
+#define ICONV_CONST
+#endif
+
 #include <poll.h>
 
 /* NetBSD */
@@ -48,9 +52,15 @@ struct hid_device_ {
 	wchar_t *last_read_error_str;
 	struct hid_device_info *device_info;
 	size_t poll_handles_length;
-	struct pollfd poll_handles[256];
+	/* poll_handles[0 .. poll_handles_length-1] are the uhid device fds.
+	   poll_handles[poll_handles_length] is reserved for interrupt_pipe[0],
+	   so poll() can be called directly on this array with a count of
+	   poll_handles_length + 1, with no per-call copy. */
+	struct pollfd poll_handles[HIDAPI_MAX_CHILD_DEVICES + 1];
 	int report_handles[256];
 	char path[USB_MAX_DEVNAMELEN];
+	int interrupt_pipe[2];
+	int interrupted;
 };
 
 struct hid_enumerate_data {
@@ -247,7 +257,7 @@ static uint32_t get_hid_report_bytes(const uint8_t *rpt, size_t len, size_t num_
  * Skips all nested Collection, i.e. iterates until the end of current level Collection.
  *
  * The return value is non-0 when an end of current Collection is found,
- * 0 when error is occured (broken Descriptor, end of a Collection is found before its begin,
+ * 0 when error is occurred (broken Descriptor, end of a Collection is found before its begin,
  *  or no Collection is found at all).
  */
 static int hid_iterate_over_collection(const uint8_t *report_descriptor, uint32_t size, unsigned int *pos, int *data_len, int *key_size)
@@ -724,6 +734,7 @@ struct hid_device_info HID_API_EXPORT * HID_API_CALL hid_enumerate(unsigned shor
 	for (size_t i = 0; i < len; i++) {
 		char devpath[USB_MAX_DEVNAMELEN];
 		int bus;
+		struct hid_device_info *prev_end;
 
 		strlcpy(devpath, "/dev/", sizeof(devpath));
 		strlcat(devpath, arr[i], sizeof(devpath));
@@ -732,7 +743,17 @@ struct hid_device_info HID_API_EXPORT * HID_API_CALL hid_enumerate(unsigned shor
 		if (bus == -1)
 			continue;
 
+		/*
+		 * ehci/ohci/uhci/dwctwo etc. use 'addr 1' for root hubs
+		 * but xhci uses 'addr 0' on NetBSD.
+		 * Check addr 0 (that would be unused on other than xhci)
+		 * and then check addr 1 if there is no device at addr 0.
+		 */
+		prev_end = hed.end;
 		enumerate_usb_devices(bus, 0, hid_enumerate_callback, &hed);
+		if (hed.end == prev_end)
+			enumerate_usb_devices(bus, 1,
+			    hid_enumerate_callback, &hed);
 
 		close(bus);
 	}
@@ -810,6 +831,17 @@ HID_API_EXPORT hid_device * HID_API_CALL hid_open_path(const char *path)
 		goto err_0;
 	}
 
+	dev->interrupt_pipe[0] = -1;
+	dev->interrupt_pipe[1] = -1;
+	if (pipe(dev->interrupt_pipe) == -1) {
+		register_global_error_format("failed to create interrupt pipe: %s", strerror(errno));
+		goto err_1;
+	}
+	fcntl(dev->interrupt_pipe[0], F_SETFL, O_NONBLOCK);
+	fcntl(dev->interrupt_pipe[1], F_SETFL, O_NONBLOCK);
+	fcntl(dev->interrupt_pipe[0], F_SETFD, FD_CLOEXEC);
+	fcntl(dev->interrupt_pipe[1], F_SETFD, FD_CLOEXEC);
+
 	drvctl = open(DRVCTLDEV, O_RDONLY | O_CLOEXEC);
 	if (drvctl == -1) {
 		register_global_error_format("failed to open drvctl: %s", strerror(errno));
@@ -860,6 +892,10 @@ HID_API_EXPORT hid_device * HID_API_CALL hid_open_path(const char *path)
 		dev->device_handle = uhid;
 	}
 
+	dev->poll_handles[dev->poll_handles_length].fd = dev->interrupt_pipe[0];
+	dev->poll_handles[dev->poll_handles_length].events = POLLIN;
+	dev->poll_handles[dev->poll_handles_length].revents = 0;
+
 	dev->blocking = 1;
 	dev->last_error_str = NULL;
 	dev->device_info = NULL;
@@ -874,6 +910,10 @@ err_3:
 err_2:
 	close(drvctl);
 err_1:
+	if (dev->interrupt_pipe[0] >= 0)
+		close(dev->interrupt_pipe[0]);
+	if (dev->interrupt_pipe[1] >= 0)
+		close(dev->interrupt_pipe[1]);
 	free(dev);
 err_0:
 	return NULL;
@@ -888,12 +928,14 @@ int HID_API_EXPORT HID_API_CALL hid_read_timeout(hid_device *dev, unsigned char 
 {
 	int res;
 	size_t i;
-	struct pollfd *ph;
 	ssize_t n;
 
 	register_device_read_error(dev, NULL);
 
-	res = poll(dev->poll_handles, dev->poll_handles_length, milliseconds);
+	/* The wake pipe stays readable until hid_read_clear_interrupt(), and it
+	   is checked before the device descriptors, so an interrupted read fails
+	   even when input is queued. */
+	res = poll(dev->poll_handles, dev->poll_handles_length + 1, milliseconds);
 	if (res == -1) {
 		register_device_read_error_format(dev, "error while polling: %s", strerror(errno));
 		return -1;
@@ -902,22 +944,25 @@ int HID_API_EXPORT HID_API_CALL hid_read_timeout(hid_device *dev, unsigned char 
 	if (res == 0)
 		return 0;
 
-	for (i = 0; i < dev->poll_handles_length; i++) {
-		ph = &dev->poll_handles[i];
+	if (dev->poll_handles[dev->poll_handles_length].revents & POLLIN) {
+		register_device_read_error(dev, "hid_read_timeout: operation interrupted");
+		return -1;
+	}
 
-		if (ph->revents & (POLLERR | POLLHUP | POLLNVAL)) {
+	for (i = 0; i < dev->poll_handles_length; i++) {
+		if (dev->poll_handles[i].revents & (POLLERR | POLLHUP | POLLNVAL)) {
 			register_device_read_error(dev, "device IO error while polling");
 			return -1;
 		}
 
-		if (ph->revents & POLLIN)
+		if (dev->poll_handles[i].revents & POLLIN)
 			break;
 	}
 
 	if (i == dev->poll_handles_length)
 		return 0;
 
-	n = read(ph->fd, data, length);
+	n = read(dev->poll_handles[i].fd, data, length);
 	if (n == -1) {
 		if (errno == EAGAIN || errno == EINPROGRESS)
 			n = 0;
@@ -940,10 +985,51 @@ HID_API_EXPORT const wchar_t* HID_API_CALL hid_read_error(hid_device *dev)
 	return dev->last_read_error_str;
 }
 
+
+int HID_API_EXPORT HID_API_CALL hid_set_num_input_buffers(hid_device *dev, int num_buffers)
+{
+	if (num_buffers <= 0 || num_buffers > HID_API_MAX_NUM_INPUT_BUFFERS) {
+		register_device_error(dev, "num_buffers out of range");
+		return -1;
+	}
+	register_device_error(dev, NULL);
+	return 0;
+}
+
 int HID_API_EXPORT HID_API_CALL hid_set_nonblocking(hid_device *dev, int nonblock)
 {
 	dev->blocking = !nonblock;
 	return 0;
+}
+
+void HID_API_EXPORT HID_API_CALL hid_read_interrupt(hid_device *dev)
+{
+	__atomic_store_n(&dev->interrupted, 1, __ATOMIC_RELEASE);
+	const char one = 1;
+	ssize_t written;
+	do {
+		written = write(dev->interrupt_pipe[1], &one, 1);
+	} while (written < 0 && errno == EINTR);
+	/* EAGAIN means the pipe already contains an interrupt notification. */
+}
+
+int HID_API_EXPORT HID_API_CALL hid_is_read_interrupted(hid_device *dev)
+{
+	return __atomic_load_n(&dev->interrupted, __ATOMIC_ACQUIRE);
+}
+
+void HID_API_EXPORT HID_API_CALL hid_read_clear_interrupt(hid_device *dev)
+{
+	char buf[64];
+	ssize_t got;
+	do {
+		/* There might be more than 64 calls to hid_read_interrupt,
+		   before calling hid_read_clear_interrupt -
+		   need to make sure to drain the pipe completely */
+		got = read(dev->interrupt_pipe[0], buf, sizeof(buf));
+	} while (got > 0 || (got < 0 && errno == EINTR));
+	/* Publish the cleared state only after the wake pipe is drained. */
+	__atomic_store_n(&dev->interrupted, 0, __ATOMIC_RELEASE);
 }
 
 int HID_API_EXPORT HID_API_CALL hid_send_feature_report(hid_device *dev, const unsigned char *data, size_t length)
@@ -978,6 +1064,11 @@ void HID_API_EXPORT HID_API_CALL hid_close(hid_device *dev)
 
 	for (size_t i = 0; i < dev->poll_handles_length; i++)
 		close(dev->poll_handles[i].fd);
+
+	if (dev->interrupt_pipe[0] >= 0)
+		close(dev->interrupt_pipe[0]);
+	if (dev->interrupt_pipe[1] >= 0)
+		close(dev->interrupt_pipe[1]);
 
 	free(dev);
 }
@@ -1087,7 +1178,7 @@ int HID_API_EXPORT_CALL hid_get_indexed_string(hid_device *dev, int string_index
 	struct usb_string_desc usd;
 	usb_string_descriptor_t *str;
 	iconv_t ic;
-	const char *src;
+	ICONV_CONST char *src;
 	size_t srcleft;
 	char *dst;
 	size_t dstleft;
@@ -1131,7 +1222,7 @@ int HID_API_EXPORT_CALL hid_get_indexed_string(hid_device *dev, int string_index
 		return -1;
 	}
 
-	src = (const char *) str->bString;
+	src = (ICONV_CONST char *)str->bString;
 	srcleft = str->bLength - 2;
 	dst = (char *) string;
 	dstleft = sizeof(wchar_t[maxlen]);

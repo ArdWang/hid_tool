@@ -52,7 +52,7 @@
 
 	@ingroup API
 */
-#define HID_API_VERSION_MINOR 15
+#define HID_API_VERSION_MINOR 16
 /** @brief Static/compile-time patch version of the library.
 
 	@ingroup API
@@ -144,6 +144,13 @@ extern "C" {
 			   Specifications:
 			   https://www.microsoft.com/download/details.aspx?id=103325 */
 			HID_API_BUS_SPI = 0x04,
+
+			/** Virtual device
+			    E.g.: https://elixir.bootlin.com/linux/v4.0/source/include/uapi/linux/input.h#L955 
+			    
+			    Since version 0.16.0, @ref HID_API_VERSION >= HID_API_MAKE_VERSION(0, 16, 0)
+			*/
+			HID_API_BUS_VIRTUAL = 0x05,
 		} hid_bus_type;
 
 		/** hidapi info structure */
@@ -379,7 +386,7 @@ extern "C" {
 
 			This function is intended for logging/debugging purposes.
 
-			This function guarantees to never return NULL for a valid @ref dev.
+			This function guarantees to never return NULL for a valid @p dev.
 			If there was no error in the last call to hid_read/hid_read_error -
 			the returned string clearly indicates that.
 
@@ -415,6 +422,165 @@ extern "C" {
 				Call hid_error(dev) to get the failure reason.
 		*/
 		int  HID_API_EXPORT HID_API_CALL hid_set_nonblocking(hid_device *dev, int nonblock);
+
+		/** @brief Upper bound for hid_set_num_input_buffers().
+
+		    Values passed above this limit are rejected by
+		    hid_set_num_input_buffers(). Guards against
+		    memory-exhaustion via unbounded input report queue growth.
+
+		    May be overridden at build time via
+		    -DHID_API_MAX_NUM_INPUT_BUFFERS=<value>.
+		    The library enforces the value used when it was built;
+		    redefining this macro only in an application does not change
+		    that limit. Build the library and application with the same
+		    value to keep the declaration and enforced limit consistent.
+		*/
+		#ifndef HID_API_MAX_NUM_INPUT_BUFFERS
+		#define HID_API_MAX_NUM_INPUT_BUFFERS 1024
+		#endif
+
+		/** @brief Set the number of input report buffers queued per device.
+
+		    Since version 0.16.0, @ref HID_API_VERSION >= HID_API_MAKE_VERSION(0, 16, 0)
+
+		    Some HID devices emit input reports in bursts at rates
+		    that exceed the default internal queue capacity, causing
+		    silent report drops on macOS and the libusb backend.
+		    This function allows callers to change how many input
+		    report buffers are retained per device.
+
+		    Call after hid_open() and before the first hid_read() to
+		    avoid losing reports buffered at open time.
+
+		    @note Per-backend behavior:
+		    - **macOS (IOKit)** and **libusb**: resizes the
+		      userspace input-report queue. Default: 30 reports.
+		      A full queue drops the oldest report. Shrinking below the
+		      queued count keeps the newest reports in FIFO order.
+		    - **Windows**: forwards to HidD_SetNumInputBuffers(),
+		      which resizes the kernel HID ring buffer. The kernel
+		      accepts values in the range [2, 512]; requests outside
+		      this range return -1. Default: 64 reports.
+		    - **Linux/FreeBSD hidraw** and **NetBSD uhid**: the call is
+		      accepted (returns 0) and validated against
+		      HID_API_MAX_NUM_INPUT_BUFFERS, but has no effect (no-op) —
+		      these kernels manage the input report buffer internally
+		      and expose no userspace resize.
+
+		    @ingroup API
+		    @param dev A device handle returned from hid_open().
+		    @param num_buffers The desired number of input report buffers.
+		        Must be in range [1, HID_API_MAX_NUM_INPUT_BUFFERS].
+
+		    @returns
+		        0 on success, -1 on failure (invalid parameters or
+		        backend-specific error). Call hid_error(dev) for
+		        details where supported.
+		*/
+		int HID_API_EXPORT HID_API_CALL hid_set_num_input_buffers(hid_device *dev, int num_buffers);
+
+		/** @brief Asynchronously interrupt blocking hid_read/hid_read_timeout call.
+
+			Since version 0.16.0, @ref HID_API_VERSION >= HID_API_MAKE_VERSION(0, 16, 0)
+
+			Puts the read pipeline of @p dev into a sticky interrupted state
+			and wakes a hid_read()/hid_read_timeout() call that is waiting
+			for input. An interrupted read returns -1; hid_read_error(dev)
+			returns a string indicating the read was interrupted.
+
+			A read already in progress when this function is called may
+			still return data that was already buffered or queued. Every
+			read entered after this function returns fails immediately with
+			-1, until @ref hid_read_clear_interrupt is called. Queued input
+			is not discarded; it remains readable after the interrupt is
+			cleared.
+
+			Only the read pipeline is affected: hid_write(), hid_get_input_report(),
+			feature/output report functions, and all other operations on @p dev
+			continue to work normally.
+
+			This function may run concurrently with device I/O, including a
+			blocked read, but not with hid_close() or hid_exit(). The device
+			handle must remain valid until all calls using it have returned.
+			The call is idempotent and is safe when no read is in flight.
+
+			Calls to hid_read_interrupt(), hid_is_read_interrupted(), and
+			hid_read_clear_interrupt() on the same device must be serialized
+			against one another, including calls to the same function.
+			Otherwise, behavior is undefined.
+
+			After this function returns, hid_is_read_interrupted() returns 1
+			until the interrupt is cleared. This function has no failure
+			result; it relies on the operating system and device driver to
+			support read interruption.
+
+			Recommended usage to cleanly shut down a dedicated read thread:
+			@code
+				hid_read_interrupt(dev);
+				// join the read thread
+				hid_close(dev);
+			@endcode
+
+			@ingroup API
+			@param dev A device handle returned from hid_open().
+		*/
+		void HID_API_EXPORT HID_API_CALL hid_read_interrupt(hid_device *dev);
+
+		/** @brief Query whether the read pipeline is currently interrupted.
+
+			Since version 0.16.0, @ref HID_API_VERSION >= HID_API_MAKE_VERSION(0, 16, 0)
+
+			Returns the current interrupt state set by @ref hid_read_interrupt
+			and @ref hid_read_clear_interrupt. This function may run alongside
+			device I/O, but not hid_close() or hid_exit(). The device handle
+			must remain valid until the call returns.
+
+			Calls to hid_read_interrupt(), hid_is_read_interrupted(), and
+			hid_read_clear_interrupt() on the same device must be serialized
+			against one another, including calls to the same function.
+			Otherwise, behavior is undefined.
+
+			@ingroup API
+			@param dev A device handle returned from hid_open().
+
+			@returns
+				1 if the read pipeline is interrupted, 0 if not.
+		*/
+		int HID_API_EXPORT HID_API_CALL hid_is_read_interrupted(hid_device *dev);
+
+		/** @brief Clear the read-interrupt state, allowing reads to resume.
+
+			Since version 0.16.0, @ref HID_API_VERSION >= HID_API_MAKE_VERSION(0, 16, 0)
+
+			Clears the sticky state set by @ref hid_read_interrupt. After
+			this function returns, hid_is_read_interrupted() returns 0 and
+			reads entered afterwards operate normally. Calling it when the
+			read pipeline is not interrupted has no effect.
+
+			Any data that the device buffered during the interrupted period
+			may be returned by subsequent reads, subject to a
+			(backend-specific) buffer capacity. For a fresh-start behavior,
+			the caller may drain the buffered data with a loop of
+			hid_read_timeout(dev, ..., 0) calls before resuming the normal
+			read loop.
+
+			Recommended use: call only when no hid_read*() call is in flight
+			on @p dev. A read that is in flight while this function runs may
+			either fail as interrupted or continue normally; which of the two
+			happens is indeterminate.
+			Do not overlap this function with hid_close() or hid_exit(); the
+			device handle must remain valid until the call returns.
+
+			Calls to hid_read_interrupt(), hid_is_read_interrupted(), and
+			hid_read_clear_interrupt() on the same device must be serialized
+			against one another, including calls to the same function.
+			Otherwise, behavior is undefined.
+
+			@ingroup API
+			@param dev A device handle returned from hid_open().
+		*/
+		void HID_API_EXPORT HID_API_CALL hid_read_clear_interrupt(hid_device *dev);
 
 		/** @brief Send a Feature report to the device.
 

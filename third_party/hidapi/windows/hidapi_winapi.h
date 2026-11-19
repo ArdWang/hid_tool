@@ -58,6 +58,7 @@ extern "C" {
 		 *  This reconstructed report descriptor is logical identical to the real report descriptor,
 		 *  but not byte wise identical.
 		 *
+		 * @ingroup API
 		 * @param[in]  hidp_preparsed_data Pointer to the HIDP_PREPARSED_DATA to read, i.e.: the value of PHIDP_PREPARSED_DATA,
 		 *   as returned by HidD_GetPreparsedData WinAPI function.
 		 * @param      buf       Pointer to the buffer where the report descriptor should be stored.
@@ -80,9 +81,11 @@ extern "C" {
 		 *
 		 * When the timeout is set to 0, hid_write function becomes non-blocking and would exit immediately.
 		 * When the timeout is set to INFINITE ((DWORD)-1), the function will not exit,
-		 * until the write operation is performed or an error occured.
+		 * until the write operation is performed or an error occurred.
 		 * See dwMilliseconds parameter documentation of WaitForSingleObject function.
 		 *
+		 * @ingroup API
+		 * @param dev A device handle returned from hid_open().
 		 * @param timeout New timeout value in milliseconds.
 		 */
 		void HID_API_EXPORT_CALL hid_winapi_set_write_timeout(hid_device *dev, unsigned long timeout);
