@@ -1,6 +1,6 @@
 # hid_tool
 
-[![pub](https://img.shields.io/badge/pub-0.1.5-blue)](https://pub.dev/packages/hid_tool)
+[![pub](https://img.shields.io/badge/pub-0.1.6-blue)](https://pub.dev/packages/hid_tool)
 [![license: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
 English | [中文](README_cn.md)
@@ -40,7 +40,7 @@ This plugin provides a comprehensive API for interacting with HID devices across
 
 ## Acknowledgements
 
-This project is a fork/modified version of [hid4flutter](https://github.com/vinsfortunato/hid4flutter) by vinsfortunato. We have renamed it to `hid_tool` and upgraded the underlying hidapi library to version 0.15.0 with additional methods and improvements.
+This project is a fork/modified version of [hid4flutter](https://github.com/vinsfortunato/hid4flutter) by vinsfortunato. We have renamed it to `hid_tool` and upgraded the underlying hidapi library to version 0.16.0 with additional methods and improvements.
 
 Original Project: [https://github.com/vinsfortunato/hid4flutter](https://github.com/vinsfortunato/hid4flutter)
 
@@ -59,7 +59,7 @@ Contributions are welcome! Feel free to submit issues and pull requests to help 
 
 ### Implementation Details
 
-- **Desktop platforms** (Windows/macOS/Linux) use [hidapi](https://github.com/libusb/hidapi) (version 0.15.0) via Dart FFI.
+- **Desktop platforms** (Windows/macOS/Linux) use [hidapi](https://github.com/libusb/hidapi) (version 0.16.0) via Dart FFI.
 - **Android** uses MethodChannel with the Android USB HID APIs.
 
 ### Currently Not Supported
@@ -77,10 +77,10 @@ Add the following line to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  hid_tool: ^0.1.5
+  hid_tool: ^0.1.6
 ```
 
-Replace `^0.1.5` with the latest version of the plugin.
+Replace `^0.1.6` with the latest version of the plugin.
 
 ### Step 2: Install Dependencies
 
@@ -110,10 +110,10 @@ sudo apt-get install libhidapi-hidraw0
 
 #### macOS
 
-On macOS, the hidapi dependency is resolved automatically by either dependency manager:
+On macOS, hidapi 0.16.0 sources are vendored directly inside the plugin at `macos/hid_tool/hidapi`, so no separate installation is needed:
 
-- **CocoaPods** (the default before Flutter `3.44`): everything is declared in the plugin's `macos/hid_tool.podspec`.
-- **Swift Package Manager**: if your app has migrated to Swift Package Manager, the plugin also ships `macos/hid_tool/Package.swift`, which builds the vendored hidapi sources (`third_party/hidapi`) as a local Swift package. This path requires Flutter `3.41` or later, because it depends on the generated `FlutterFramework` package.
+- **Swift Package Manager**: `macos/hid_tool/Package.swift` builds that bundled hidapi as a local Swift package. This path requires Flutter `3.41` or later, because it depends on the generated `FlutterFramework` package. The macOS example app uses this integration.
+- **CocoaPods**: apps that still use CocoaPods can integrate through `macos/hid_tool.podspec`.
 
 If your macOS app uses App Sandbox (`com.apple.security.app-sandbox = true`), you must add the USB device access entitlement to your `DebugProfile.entitlements` and `Release.entitlements` files:
 

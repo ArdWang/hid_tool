@@ -1,6 +1,6 @@
 # hid_tool
 
-[![pub](https://img.shields.io/badge/pub-0.1.5-blue)](https://pub.dev/packages/hid_tool)
+[![pub](https://img.shields.io/badge/pub-0.1.6-blue)](https://pub.dev/packages/hid_tool)
 [![license: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
 [English](README.md) | 中文
@@ -40,7 +40,7 @@
 
 ## 致谢
 
-本项目是 [hid4flutter](https://github.com/vinsfortunato/hid4flutter) 的分支/修改版本，原作者为 vinsfortunato。我们将其重命名为 `hid_tool`，并升级了底层的 hidapi 库到 0.15.0 版本，同时添加了额外的方法和改进。
+本项目是 [hid4flutter](https://github.com/vinsfortunato/hid4flutter) 的分支/修改版本，原作者为 vinsfortunato。我们将其重命名为 `hid_tool`，并升级了底层的 hidapi 库到 0.16.0 版本，同时添加了额外的方法和改进。
 
 原项目地址：[https://github.com/vinsfortunato/hid4flutter](https://github.com/vinsfortunato/hid4flutter)
 
@@ -59,7 +59,7 @@
 
 ### 实现细节
 
-- **桌面平台**（Windows/macOS/Linux）通过 [hidapi](https://github.com/libusb/hidapi)（版本 0.15.0）和 Dart FFI 实现。
+- **桌面平台**（Windows/macOS/Linux）通过 [hidapi](https://github.com/libusb/hidapi)（版本 0.16.0）和 Dart FFI 实现。
 - **Android** 通过 MethodChannel 和 Android USB HID API 实现。
 
 ### 当前暂不支持
@@ -77,10 +77,10 @@
 
 ```yaml
 dependencies:
-  hid_tool: ^0.1.5
+  hid_tool: ^0.1.6
 ```
 
-将 `^0.1.5` 替换为插件的最新版本。
+将 `^0.1.6` 替换为插件的最新版本。
 
 ### 步骤 2：安装依赖
 
@@ -110,10 +110,10 @@ sudo apt-get install libhidapi-hidraw0
 
 #### macOS
 
-在 macOS 上，hidapi 依赖会由以下两种依赖管理器之一自动解析：
+在 macOS 上，hidapi 0.16.0 源码直接内置在插件目录 `macos/hid_tool/hidapi` 中，无需单独安装：
 
-- **CocoaPods**（在 Flutter `3.44` 之前为默认方式）：相关声明位于插件的 `macos/hid_tool.podspec` 中。
-- **Swift Package Manager**：如果您的应用已迁移到 Swift Package Manager，插件同时提供 `macos/hid_tool/Package.swift`，会把仓库内置的 hidapi 源码（`third_party/hidapi`）构建为本地 Swift 包。该路径要求 Flutter `3.41` 或更高版本，因为它依赖 Flutter 生成的 `FlutterFramework` 包。
+- **Swift Package Manager**：`macos/hid_tool/Package.swift` 会将内置的 hidapi 构建为本地 Swift 包。该路径要求 Flutter `3.41` 或更高版本，因为它依赖 Flutter 生成的 `FlutterFramework` 包。macOS 示例应用采用的是这一集成方式。
+- **CocoaPods**：仍在使用 CocoaPods 的应用可以通过 `macos/hid_tool.podspec` 集成插件。
 
 如果您的 macOS 应用启用了 App Sandbox（`com.apple.security.app-sandbox = true`），必须在 `DebugProfile.entitlements` 和 `Release.entitlements` 文件中添加 USB 设备访问权限：
 

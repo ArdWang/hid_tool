@@ -8,6 +8,17 @@ This project is a fork/modified version of [hid4flutter](https://github.com/vins
 
 ---
 
+## [0.1.6] - 2026-11-19
+
+### Changed
+
+- **Upgraded vendored hidapi from `0.15.0` to `0.16.0`** across all platforms. Windows and Linux consume the updated sources in `third_party/hidapi`; macOS now has its own copy at `macos/hid_tool/hidapi`, with `Hid4flutterPlugin.swift` updated for the new API.
+- **Removed the `macos/hid_tool/third_party/hidapi` symlink** added in 0.1.5. The hidapi sources are now vendored directly inside the plugin and built by `macos/hid_tool/Package.swift` as a local Swift package target (product `hidapi`, dynamic, linked with IOKit and CoreFoundation). This makes the published package self-contained and avoids symlink handling problems when packaging on Windows.
+- **The macOS example app now uses Swift Package Manager**: removed `example/macos/Podfile` and `Podfile.lock` and updated the Xcode project/schemes accordingly. CocoaPods consumers can still use the plugin through `macos/hid_tool.podspec`.
+- Bumped the package version to `0.1.6`; updated `README.md` and `README_cn.md` version references and hidapi version notes.
+
+---
+
 ## [0.1.5] - 2026-11-16
 
 ### Fixed

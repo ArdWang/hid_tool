@@ -8,6 +8,17 @@
 
 ---
 
+## [0.1.6] - 2026-11-19
+
+### 更改
+
+- **内置 hidapi 从 `0.15.0` 升级到 `0.16.0`**，覆盖所有平台。Windows 与 Linux 继续使用更新后的 `third_party/hidapi` 源码；macOS 改为使用插件内的独立副本 `macos/hid_tool/hidapi`，`Hid4flutterPlugin.swift` 也同步适配了新 API。
+- **移除了 0.1.5 引入的 `macos/hid_tool/third_party/hidapi` 符号链接**。hidapi 源码现在直接内置在插件目录中，并由 `macos/hid_tool/Package.swift` 作为本地 Swift 包 target 构建（产物 `hidapi` 为动态库，链接 IOKit 与 CoreFoundation）。这样发布的包自包含，避免了在 Windows 上打包时符号链接退化的问题。
+- **macOS 示例应用改用 Swift Package Manager**：删除了 `example/macos/Podfile` 与 `Podfile.lock`，并同步更新了 Xcode 工程与 scheme。仍在使用 CocoaPods 的应用可以通过 `macos/hid_tool.podspec` 继续集成插件。
+- 包版本升级到 `0.1.6`；更新了 `README.md` 与 `README_cn.md` 的版本引用及 hidapi 版本说明。
+
+---
+
 ## [0.1.5] - 2026-11-16
 
 ### 修复
