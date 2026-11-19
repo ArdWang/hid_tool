@@ -1,6 +1,6 @@
 # hid_tool
 
-[![pub](https://img.shields.io/badge/pub-0.1.6-blue)](https://pub.dev/packages/hid_tool)
+[![pub](https://img.shields.io/badge/pub-0.1.7-blue)](https://pub.dev/packages/hid_tool)
 [![license: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
 English | [中文](README_cn.md)
@@ -77,10 +77,10 @@ Add the following line to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  hid_tool: ^0.1.6
+  hid_tool: ^0.1.7
 ```
 
-Replace `^0.1.6` with the latest version of the plugin.
+Replace `^0.1.7` with the latest version of the plugin.
 
 ### Step 2: Install Dependencies
 
@@ -211,7 +211,7 @@ try {
 }
 ```
 
-### Send Output Report (Using hidapi 0.15.0+ Method)
+### Send Output Report (Using hidapi 0.16.0 Method)
 
 ```dart
 final HidDevice device = ...;
@@ -219,7 +219,7 @@ final HidDevice device = ...;
 try {
   await device.open();
 
-  // Use the new sendOutputReport method (hidapi 0.15.0+)
+  // Use the sendOutputReport method (hidapi 0.16.0)
   // This sends through Interrupt OUT endpoint if available
   Uint8List data = Uint8List(32);
   await device.sendOutputReport(data, reportId: 0x00);
@@ -347,7 +347,7 @@ try {
   await device.open();
 
   // Get the HID report descriptor from the device
-  // This method is available since hidapi 0.14.0+
+  // This method is available in the bundled hidapi 0.16.0
   HidReportDescriptor descriptor = await device.getReportDescriptor();
 
   // Access the raw bytes
@@ -408,13 +408,13 @@ try {
 | `open()` | Open the HID device connection |
 | `close()` | Close the HID device connection |
 | `sendReport(data, reportId)` | Send an Output report |
-| `sendOutputReport(data, reportId)` | Send an Output report via Interrupt OUT (hidapi 0.15.0+) |
+| `sendOutputReport(data, reportId)` | Send an Output report via Interrupt OUT (hidapi 0.16.0) |
 | `receiveReport(length, timeout)` | Receive an Input report |
 | `inputStream()` | Get a stream of input bytes |
 | `sendFeatureReport(data, reportId)` | Send a Feature report |
 | `receiveFeatureReport(reportId, bufferSize)` | Receive a Feature report |
 | `getIndexedString(index, maxLength)` | Get a string by its index |
-| `getReportDescriptor()` | Get and parse the HID report descriptor (hidapi 0.14.0+) |
+| `getReportDescriptor()` | Get and parse the HID report descriptor (hidapi 0.16.0) |
 
 ### Report Descriptor Classes
 

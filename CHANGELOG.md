@@ -8,6 +8,20 @@ This project is a fork/modified version of [hid4flutter](https://github.com/vins
 
 ---
 
+## [0.1.7] - 2026-11-19
+
+### Fixed
+
+- **Example app failed to resolve dependencies on Dart 3.12**: `material_ui ^1.11.1` (pulled in by PR #12) requires Dart SDK `^3.13.0`, so `flutter pub get` failed on Dart 3.12. Migrated `example/lib/main.dart` to import `package:material_ui/material_ui.dart` and pinned `material_ui` to `^1.2.0`, the newest version compatible with Dart 3.12. Regenerated `example/pubspec.lock`.
+
+### Changed
+
+- Updated `macos/hid_tool.podspec` to depend on the hidapi `0.16.0` pod (previously `0.15.0`), so CocoaPods and Swift Package Manager consumers use the same hidapi version.
+- Updated the hidapi version notes in `README.md` and `README_cn.md` to consistently reference `0.16.0`.
+- Bumped the package version to `0.1.7`.
+
+---
+
 ## [0.1.6] - 2026-11-19
 
 ### Changed

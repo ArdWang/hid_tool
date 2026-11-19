@@ -8,6 +8,20 @@
 
 ---
 
+## [0.1.7] - 2026-11-19
+
+### 修复
+
+- **示例应用在 Dart 3.12 上依赖解析失败**：PR #12 带入的 `material_ui ^1.11.1` 要求 Dart SDK `^3.13.0`，在 Dart 3.12 上 `flutter pub get` 直接失败。已将 `example/lib/main.dart` 的 import 迁移为 `package:material_ui/material_ui.dart`，并把 `material_ui` 固定为兼容 Dart 3.12 的最高版本 `^1.2.0`，重新生成了 `example/pubspec.lock`。
+
+### 更改
+
+- 更新 `macos/hid_tool.podspec`，hidapi pod 依赖从 `0.15.0` 改为 `0.16.0`，使 CocoaPods 与 Swift Package Manager 两种集成方式的 hidapi 版本一致。
+- 将 `README.md` 与 `README_cn.md` 中的 hidapi 版本说明统一为 `0.16.0`。
+- 包版本升级到 `0.1.7`。
+
+---
+
 ## [0.1.6] - 2026-11-19
 
 ### 更改

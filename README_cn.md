@@ -1,6 +1,6 @@
 # hid_tool
 
-[![pub](https://img.shields.io/badge/pub-0.1.6-blue)](https://pub.dev/packages/hid_tool)
+[![pub](https://img.shields.io/badge/pub-0.1.7-blue)](https://pub.dev/packages/hid_tool)
 [![license: MIT](https://img.shields.io/badge/License-MIT-purple.svg)](https://opensource.org/licenses/MIT)
 
 [English](README.md) | 中文
@@ -77,10 +77,10 @@
 
 ```yaml
 dependencies:
-  hid_tool: ^0.1.6
+  hid_tool: ^0.1.7
 ```
 
-将 `^0.1.6` 替换为插件的最新版本。
+将 `^0.1.7` 替换为插件的最新版本。
 
 ### 步骤 2：安装依赖
 
@@ -211,7 +211,7 @@ try {
 }
 ```
 
-### 发送输出报告（使用 hidapi 0.15.0+ 方法）
+### 发送输出报告（使用 hidapi 0.16.0 方法）
 
 ```dart
 final HidDevice device = ...;
@@ -219,7 +219,7 @@ final HidDevice device = ...;
 try {
   await device.open();
 
-  // 使用新的 sendOutputReport 方法（hidapi 0.15.0+）
+  // 使用 sendOutputReport 方法（hidapi 0.16.0）
   // 如果可用，这将通过中断 OUT 端点发送
   Uint8List data = Uint8List(32);
   await device.sendOutputReport(data, reportId: 0x00);
@@ -347,7 +347,7 @@ try {
   await device.open();
 
   // 从设备获取 HID 报告描述符
-  // 此方法在 hidapi 0.14.0+ 版本可用
+  // 内置的 hidapi 0.16.0 提供此方法
   HidReportDescriptor descriptor = await device.getReportDescriptor();
 
   // 访问原始字节
@@ -408,13 +408,13 @@ try {
 | `open()` | 打开 HID 设备连接 |
 | `close()` | 关闭 HID 设备连接 |
 | `sendReport(data, reportId)` | 发送输出报告 |
-| `sendOutputReport(data, reportId)` | 通过中断 OUT 发送输出报告（hidapi 0.15.0+） |
+| `sendOutputReport(data, reportId)` | 通过中断 OUT 发送输出报告（hidapi 0.16.0） |
 | `receiveReport(length, timeout)` | 接收输入报告 |
 | `inputStream()` | 获取输入字节流 |
 | `sendFeatureReport(data, reportId)` | 发送功能报告 |
 | `receiveFeatureReport(reportId, bufferSize)` | 接收功能报告 |
 | `getIndexedString(index, maxLength)` | 按索引获取字符串 |
-| `getReportDescriptor()` | 获取并解析 HID 报告描述符（hidapi 0.14.0+） |
+| `getReportDescriptor()` | 获取并解析 HID 报告描述符（hidapi 0.16.0） |
 
 ### 报告描述符类
 
