@@ -112,8 +112,8 @@ sudo apt-get install libhidapi-hidraw0
 
 On macOS, hidapi 0.16.0 sources are vendored directly inside the plugin at `macos/hid_tool/hidapi`, so no separate installation is needed:
 
-- **Swift Package Manager**: `macos/hid_tool/Package.swift` builds that bundled hidapi as a local Swift package. This path requires Flutter `3.41` or later, because it depends on the generated `FlutterFramework` package. The macOS example app uses this integration.
-- **CocoaPods**: apps that still use CocoaPods can integrate through `macos/hid_tool.podspec`.
+- **Swift Package Manager**: `macos/hid_tool/Package.swift` builds that bundled hidapi as a local Swift package. This path requires Flutter `3.41` or later, because it depends on the generated `FlutterFramework` package.
+- **CocoaPods**: apps can integrate through `macos/hid_tool.podspec`. The bundled macOS example app uses CocoaPods (`example/macos/Podfile`).
 
 If your macOS app uses App Sandbox (`com.apple.security.app-sandbox = true`), you must add the USB device access entitlement to your `DebugProfile.entitlements` and `Release.entitlements` files:
 

@@ -13,11 +13,13 @@
 ### 修复
 
 - **示例应用在 Dart 3.12 上依赖解析失败**：PR #12 带入的 `material_ui ^1.11.1` 要求 Dart SDK `^3.13.0`，在 Dart 3.12 上 `flutter pub get` 直接失败。已将 `example/lib/main.dart` 的 import 迁移为 `package:material_ui/material_ui.dart`，并把 `material_ui` 固定为兼容 Dart 3.12 的最高版本 `^1.2.0`，重新生成了 `example/pubspec.lock`。
+- **macOS Swift Package Manager 在声明的部署目标上编译失败**：`Hid4flutterPlugin.swift` 使用了 `kIOMainPortDefault`，该 API 从 macOS 12.0 起才可用，而插件声明的部署目标是 macOS 10.13，导致 SPM 路径编译失败。现在通过 `#available(macOS 12.0, *)` 做版本判断，旧系统回退到 `kIOMasterPortDefault`。感谢 [@appdev-thermoworks](https://github.com/appdev-thermoworks) 提供的修复。
 
 ### 更改
 
 - 更新 `macos/hid_tool.podspec`，hidapi pod 依赖从 `0.15.0` 改为 `0.16.0`，使 CocoaPods 与 Swift Package Manager 两种集成方式的 hidapi 版本一致。
 - 将 `README.md` 与 `README_cn.md` 中的 hidapi 版本说明统一为 `0.16.0`。
+- **macOS 示例应用改回使用 CocoaPods**：重新引入 `example/macos/Podfile`、`Podfile.lock`、`Pods/Target Support Files` 的 xcconfig include，以及 Xcode 工程/workspace 中的对应条目（这些在 0.1.6 切换到 SPM 时被移除）。`example/pubspec.lock` 现在记录 hid_tool `0.1.7`。插件本身仍同时支持 CocoaPods 与 Swift Package Manager。
 - 包版本升级到 `0.1.7`。
 
 ---

@@ -112,8 +112,8 @@ sudo apt-get install libhidapi-hidraw0
 
 在 macOS 上，hidapi 0.16.0 源码直接内置在插件目录 `macos/hid_tool/hidapi` 中，无需单独安装：
 
-- **Swift Package Manager**：`macos/hid_tool/Package.swift` 会将内置的 hidapi 构建为本地 Swift 包。该路径要求 Flutter `3.41` 或更高版本，因为它依赖 Flutter 生成的 `FlutterFramework` 包。macOS 示例应用采用的是这一集成方式。
-- **CocoaPods**：仍在使用 CocoaPods 的应用可以通过 `macos/hid_tool.podspec` 集成插件。
+- **Swift Package Manager**：`macos/hid_tool/Package.swift` 会将内置的 hidapi 构建为本地 Swift 包。该路径要求 Flutter `3.41` 或更高版本，因为它依赖 Flutter 生成的 `FlutterFramework` 包。
+- **CocoaPods**：应用可以通过 `macos/hid_tool.podspec` 集成。随仓库提供的 macOS 示例应用使用的是 CocoaPods（`example/macos/Podfile`）。
 
 如果您的 macOS 应用启用了 App Sandbox（`com.apple.security.app-sandbox = true`），必须在 `DebugProfile.entitlements` 和 `Release.entitlements` 文件中添加 USB 设备访问权限：
 

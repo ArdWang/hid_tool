@@ -13,11 +13,13 @@ This project is a fork/modified version of [hid4flutter](https://github.com/vins
 ### Fixed
 
 - **Example app failed to resolve dependencies on Dart 3.12**: `material_ui ^1.11.1` (pulled in by PR #12) requires Dart SDK `^3.13.0`, so `flutter pub get` failed on Dart 3.12. Migrated `example/lib/main.dart` to import `package:material_ui/material_ui.dart` and pinned `material_ui` to `^1.2.0`, the newest version compatible with Dart 3.12. Regenerated `example/pubspec.lock`.
+- **macOS Swift Package Manager build failed on the declared deployment target**: `Hid4flutterPlugin.swift` used `kIOMainPortDefault`, which is only available from macOS 12.0, while the plugin declares macOS 10.13 as its deployment target. The SPM path therefore failed to compile. The call is now guarded with `#available(macOS 12.0, *)`, falling back to `kIOMasterPortDefault` on older systems. Thanks to [@appdev-thermoworks](https://github.com/appdev-thermoworks) for the fix.
 
 ### Changed
 
 - Updated `macos/hid_tool.podspec` to depend on the hidapi `0.16.0` pod (previously `0.15.0`), so CocoaPods and Swift Package Manager consumers use the same hidapi version.
 - Updated the hidapi version notes in `README.md` and `README_cn.md` to consistently reference `0.16.0`.
+- **The macOS example app now uses CocoaPods again**: reintroduced `example/macos/Podfile`, `Podfile.lock`, the `Pods/Target Support Files` xcconfig includes, and the Xcode project/workspace entries (these were removed in 0.1.6 when the example moved to SPM). `example/pubspec.lock` now records hid_tool `0.1.7`. The plugin itself still supports both CocoaPods and Swift Package Manager.
 - Bumped the package version to `0.1.7`.
 
 ---
